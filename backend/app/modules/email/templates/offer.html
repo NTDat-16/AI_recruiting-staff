@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thư mời nhận việc (Job Offer) - {{ company_name }}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f7f9fc; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .header { border-bottom: 2px solid #10b981; padding-bottom: 15px; margin-bottom: 20px; }
+    .header h2 { color: #065f46; margin: 0; }
+    .content { margin-bottom: 25px; }
+    .details { background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; border-radius: 4px; margin: 15px 0; }
+    .button { display: inline-block; padding: 12px 24px; background-color: #10b981; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 10px; }
+    .footer { font-size: 12px; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 15px; margin-top: 25px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Chúc Mừng Bạn Đã Nhận Được Thư Mời Gia Nhập {{ company_name }}!</h2>
+    </div>
+    <div class="content">
+      <p>Kính gửi <strong>{{ candidate_name }}</strong>,</p>
+      <p>Chúng tôi vô cùng vui mừng thông báo rằng bạn đã hoàn thành xuất sắc các vòng phỏng vấn và chính thức được lựa chọn cho vị trí <strong>{{ job_title }}</strong> tại {{ company_name }}.</p>
+      
+      <div class="details">
+        <p><strong>Vị trí:</strong> {{ job_title }}</p>
+        <p><strong>Mức lương chính thức:</strong> {{ salary_offer }}</p>
+        <p><strong>Ngày dự kiến bắt đầu:</strong> {{ start_date }}</p>
+      </div>
+
+      {% if custom_message %}
+      <p>{{ custom_message }}</p>
+      {% endif %}
+
+      <p>Chi tiết về hợp đồng lao động và quyền lợi đãi ngộ được đính kèm trong thư này. Vui lòng phản hồi xác nhận trước ngày {{ response_deadline }}.</p>
+      <p style="text-align: center;">
+        <a href="{{ confirmation_url }}" class="button">Xác Nhận Nhận Lời Đề Nghị</a>
+      </p>
+      <p>Chào mừng bạn gia nhập đội ngũ của chúng tôi!</p>
+    </div>
+    <div class="footer">
+      <p>Ban Giám đốc & Phòng Nhân sự {{ company_name }}</p>
+    </div>
+  </div>
+</body>
+</html>

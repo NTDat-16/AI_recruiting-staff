@@ -1,0 +1,50 @@
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
+from app.ai.schemas import SuggestedQuestion
+
+
+class InterviewCreate(BaseModel):
+    application_id: str
+    interviewer_id: Optional[str] = None
+    title: str = Field(..., example="Phỏng vấn Kỹ thuật Vòng 1")
+    round_number: int = Field(1, ge=1)
+    scheduled_time: datetime
+    duration_minutes: int = Field(45, ge=15, le=180)
+    format: str = Field("online", description="'online' hoặc 'offline'")
+    location: Optional[str] = Field(None, example="Phòng họp 302, Tòa nhà Innovation")
+
+
+class InterviewUpdate(BaseModel):
+    interviewer_id: Optional[str] = None
+    title: Optional[str] = None
+    scheduled_time: Optional[datetime] = None
+    duration_minutes: Optional[int] = None
+    format: Optional[str] = None
+    location: Optional[str] = None
+    confirmation_status: Optional[str] = None
+
+
+class CandidateConfirmInterview(BaseModel):
+    action: str = Field(..., description="'confirm', 'reschedule', hoặc 'decline'")
+    note: Optional[str] = Field(None, description="Lý do hoặc đề xuất khung giờ mới")
+
+
+class InterviewResponse(BaseModel):
+    id: str
+    application_id: str
+    company_id: str
+    interviewer_id: Optional[str] = None
+    title: str
+    round_number: int
+    scheduled_time: datetime
+    duration_minutes: int
+    format: str
+    meeting_link: Optional[str] = None
+    location: Optional[str] = None
+    confirmation_status: str
+    ai_suggested_questions: Optional[List[Dict[str, Any]]] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
