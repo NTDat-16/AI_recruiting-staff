@@ -780,5 +780,42 @@ requests.js:1  POST http://localhost:8000/api/v1/candidates/apply net::ERR_FAILE
 | **Test build Next.js** | Lệnh `npm run build` không phát sinh lỗi compile | ✅ **ĐẠT** | 11/11 trang hoàn thành Static Optimization |
 | **Chuẩn bị sẵn API Keys** | Đầy đủ khóa môi trường trong `.env.example` | ✅ **ĐẠT** | Đã bổ sung biến môi trường Vercel, Gemini, Neon/Supabase DB |
 
+
+---
+
+## 20. BÁO CÁO CHUẨN HÓA REPO THÀNH MONOREPO CHUẨN VERCEL (LỰA CHỌN 1)
+*(Thực hiện theo yêu cầu chuẩn hóa kiến trúc thư mục để deploy Vercel thuận lợi nhất với Root Directory = `./`)*
+
+### 20.1. Chuyển đổi Cấu trúc Thư mục Toàn diện
+1. **Frontend Next.js đưa ra ngoài thư mục gốc (Root):**
+   - Đã di chuyển toàn bộ: `app/`, `components/`, `lib/`, `public/`, `types/`, `next.config.mjs`, `package.json`, `package-lock.json`, `postcss.config.mjs`, `tailwind.config.ts`, `tsconfig.json`, `next-env.d.ts` ra trực tiếp thư mục gốc `./`.
+   - Xóa bỏ thư mục trung gian `frontend/`.
+2. **Backend Python chuẩn hóa thành `api/`:**
+   - Toàn bộ code backend được đặt trong thư mục `api/`:
+     - `api/index.py`: Entry point chính của Vercel Serverless (khởi tạo FastAPI app, nạp các routes `/api/health`, `/api/chat`, và toàn bộ `/api/v1/*`).
+     - `api/app/`: Toàn bộ modules DDD-lite (`core/`, `modules/`, `ai/`, `workers/`, `main.py`).
+     - `api/alembic/` & `api/alembic.ini`: Database migrations.
+     - `api/Dockerfile`: Dockerfile cho backend container.
+   - Xóa bỏ thư mục cũ `backend/`.
+3. **Danh mục thư viện & Cấu hình Vercel tại thư mục gốc:**
+   - `requirements.txt`: Đặt tại thư mục gốc (< 250MB) chứa các Cloud SDKs nhẹ phục vụ Serverless Function.
+   - `vercel.json`: Đặt tại thư mục gốc, định tuyến `/api/(.*)` về `api/index.py` với memory 1024MB và maxDuration 60s.
+
+### 20.2. Đồng bộ Hệ thống Môi trường Dev & Docker
+- Cập nhật `docker-compose.yml`:
+  - `backend`: `context: ./api` (volume mount `./api:/app`).
+  - `celery-worker`: `context: ./api` (volume mount `./api:/app`).
+  - `frontend`: `context: .` với `Dockerfile.frontend`.
+- Tạo `.dockerignore.frontend` loại trừ `api`, `storage`, `database` khi build container frontend.
+
+### 20.3. Nghiệm thu Kiểm thử Sau Chuẩn Hóa
+1. **Kiểm thử Python Serverless API:**
+   - Chạy kiểm tra nạp `api/index.py` từ thư mục gốc: Thành công nạp đầy đủ các router `/api/v1/auth`, `/api/v1/jobs`, `/api/v1/candidates`, `/api/v1/interviews`, `/api/v1/evaluations`, `/api/v1/email` cùng `/api/health`, `/api/chat`.
+2. **Kiểm thử Next.js Build tại thư mục gốc:**
+   - Chạy `npm run build` trực tiếp tại root: Biên dịch thành công 11/11 routes (100% static & dynamic pages) chỉ trong 10.6s.
+3. **Cấu hình trên Vercel Dashboard:**
+   - Mục **Root Directory**: Để trống hoặc để mặc định `./`.
+   - Vercel tự động build Next.js làm giao diện và tự động build các hàm Python trong thư mục `api/` làm API Serverless.
+
 ---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*
