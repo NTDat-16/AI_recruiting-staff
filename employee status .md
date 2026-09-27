@@ -817,5 +817,50 @@ requests.js:1  POST http://localhost:8000/api/v1/candidates/apply net::ERR_FAILE
    - Mục **Root Directory**: Để trống hoặc để mặc định `./`.
    - Vercel tự động build Next.js làm giao diện và tự động build các hàm Python trong thư mục `api/` làm API Serverless.
 
+
+---
+
+## 21. BÁO CÁO KHẮC PHỤC TRIỆT ĐỂ LỖI MODULE NOT FOUND: `@/lib/utils/formatters`
+*(Xử lý lỗi phân biệt thư mục và cấu hình Git khi deploy lên môi trường Linux của Vercel)*
+
+### 21.1. Nguyên nhân Gốc rễ (Root Cause)
+- Khi chuẩn hóa cấu trúc Monorepo đưa Next.js ra thư mục gốc, thư mục `lib/` (chứa tiện ích formatters và API client của Frontend) được đưa ra `./lib/`.
+- Tuy nhiên, trong tệp `.gitignore` ban đầu có dòng kế thừa từ template Python:
+  ```gitignore
+  lib/
+  lib64/
+  ```
+- Dòng `lib/` này đã khiến Git âm thầm bỏ qua toàn bộ thư mục `lib/` của Next.js, không thêm vào commit khi người dùng push lên GitHub.
+- Do đó, repository trên GitHub bị thiếu hoàn toàn thư mục `lib/`, dẫn đến việc Vercel khi clone mã nguồn và chạy `next build` trên môi trường Linux báo lỗi:
+  `Module not found: Can't resolve '@/lib/utils/formatters'`.
+
+### 21.2. Các Bước Khắc phục Triệt để
+1. **Sửa đổi `.gitignore`:**
+   - Đã loại bỏ hoàn toàn các dòng `lib/` và `lib64/` khỏi `.gitignore` để đảm bảo toàn bộ thư mục `lib/` của Next.js được Git theo dõi.
+2. **Kiểm tra tệp và Casing:**
+   - Xác nhận tệp `lib/utils/formatters.ts` tồn tại đầy đủ với định dạng chữ thường chính xác:
+     - `cn`: Ghép class Tailwind bằng clsx & twMerge.
+     - `formatDate`: Định dạng ngày giờ chuẩn `vi-VN`.
+     - `formatScore` & `getScoreColor`: Định dạng điểm match ứng viên.
+   - Toàn bộ các câu lệnh import trong components (`@/lib/utils/formatters`) đều khớp 100% với tên tệp và đường dẫn trên Linux.
+3. **Xác nhận `tsconfig.json`:**
+   - Đường dẫn alias paths đã cấu hình chính xác:
+     ```json
+     "paths": {
+       "@/*": ["./*"]
+     }
+     ```
+4. **Kiểm thử Biên dịch Cục bộ (`npm run build`):**
+   - Chạy lệnh `npm run build` ngay trên máy: Biên dịch thành công 11/11 routes mà không có bất kỳ lỗi nào.
+5. **Theo dõi Git:**
+   - Đã thêm toàn bộ các tệp trong `lib/` vào Git staging:
+     - `lib/utils/formatters.ts`
+     - `lib/api/auth.ts`
+     - `lib/api/candidates.ts`
+     - `lib/api/client.ts`
+     - `lib/api/evaluations.ts`
+     - `lib/api/interviews.ts`
+     - `lib/api/jobs.ts`
+
 ---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*
