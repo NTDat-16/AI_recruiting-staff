@@ -708,5 +708,77 @@ requests.js:1  POST http://localhost:8000/api/v1/candidates/apply net::ERR_FAILE
   - Ngay tại cột "Trạng thái", HR có thể chuyển đổi nhanh giữa: `⏳ Chờ phản hồi`, `✅ Đã xác nhận`, `❌ Từ chối / Hủy`, `⏰ Yêu cầu đổi giờ`.
   - Khi HR chọn **"❌ Từ chối / Hủy"**, hệ thống tự động đồng bộ hồ sơ ứng viên trong Pipeline sang trạng thái **"Từ chối" (`rejected`)**, ghi lại lịch sử vào ghi chú `hr_notes` tức thì.
 
+
+---
+
+## 19. BÁO CÁO CÔNG TÁC TIỀN CHUẨN BỊ DEPLOY VERCEL SERVERLESS (NEXT.JS + FASTAPI PYTHON)
+*(Thực hiện và nghiệm thu nghiêm ngặt theo tài liệu kỹ thuật: `Tien_Chuan_Bi_Deploy_AI_NextJS_Python_Vercel.docx`)*
+
+### 19.1. Chuẩn hóa Kiến trúc Thư mục Monorepo Vercel
+1. **Khởi tạo Entry Point Backend Serverless (`api/index.py` & `api/__init__.py`):**
+   - Thiết kế instance FastAPI chuẩn serverless hỗ trợ cả docs UI tại `/api/docs`, OpenAPI schema tại `/api/openapi.json`.
+   - Cung cấp sẵn các endpoint tiêu chuẩn:
+     - `GET /` & `GET /api`: Endpoint gốc thông báo trạng thái và điều hướng.
+     - `GET /api/health`: Health-check kiểm tra tình trạng dịch vụ và môi trường (`local` / `production`).
+     - `POST /api/chat`: Xử lý tương tác AI đám mây tốc độ cao (Gemini, Claude, GPT).
+     - Tự động nạp động (auto-mount) toàn bộ các router nghiệp vụ `/api/v1/*` (Auth, Job Posting, Candidate, Interview, Evaluation, Email).
+2. **Khởi tạo `vercel.json` tại thư mục gốc:**
+   - Cấu hình chỉ thị build tự động cho Next.js: `npm --prefix frontend install && npm --prefix frontend run build`.
+   - Khai báo output directory: `frontend/.next`.
+   - Cấu hình Serverless Function Python: `"maxDuration": 60` giây, `"memory": 1024` MB.
+   - Thiết lập quy tắc Rewrites toàn diện: Ánh xạ mọi request `/api/(.*)` về `api/index.py`.
+3. **Khởi tạo `package.json` tại thư mục gốc:**
+   - Hỗ trợ nền tảng Vercel tự động nhận diện Monorepo Next.js.
+   - Định nghĩa các scripts tiện ích: `dev`, `build`, `start`, `lint`.
+
+### 19.2. Sàng lọc Danh mục Thư viện Tinh gọn (`requirements.txt`)
+- Tuân thủ triệt để **Quy tắc vàng Serverless**: Tuyệt đối không cài đặt `torch`, `torchvision`, `transformers`, `diffusers`, `faiss` nặng nề vượt trần 250MB của Vercel.
+- Thay thế hoàn toàn bằng các Cloud SDKs nhẹ, async, hiệu năng cao:
+  - `fastapi`, `uvicorn[standard]`, `pydantic`, `pydantic-settings`
+  - `openai`, `anthropic`, `httpx` (Tích hợp Gemini 1.5/2.0 qua Google OpenAI-compatible endpoint)
+  - `sqlalchemy`, `greenlet`, `asyncpg`, `pgvector`, `email-validator`
+  - `python-jose`, `passlib[bcrypt]`, `python-multipart`
+  - `python-docx`, `pdfplumber`, `pypdfium2`, `pillow`, `jinja2`, `python-dotenv`
+- Dung lượng uncompressed toàn bộ package ước tính < 90MB (nằm an toàn trong ngưỡng < 250MB của Vercel).
+
+### 19.3. Cấu hình Reverse Proxy & Rewrites (`frontend/next.config.mjs`)
+- Thiết lập logic phát hiện môi trường thông minh (`isVercel = Boolean(process.env.VERCEL)`):
+  - Khi chạy trên Vercel: Cơ chế Serverless Functions tự động xử lý các route `/api/*`, không áp dụng rewrites lặp. Tắt `output: "standalone"` để Vercel tối ưu hóa native.
+  - Khi chạy Docker / Local dev: Giữ nguyên `output: "standalone"` phục vụ container, tự động ánh xạ `/api/:path*` và `/storage/:path*` tới backend FastAPI (`http://backend:8000` hoặc `http://127.0.0.1:8000`).
+
+### 19.4. Kiểm thử Cục bộ Song song (Local Testing Results)
+1. **Kiểm thử Backend Python Serverless (`api/index.py`):**
+   - `GET /api` -> `200 OK` (`{"service": "AI Recruiting Platform API", "status": "online"}`).
+   - `GET /api/health` -> `200 OK` (`{"status": "ok", "env": "local", "provider": "gemini"}`).
+   - `POST /api/chat` -> `200 OK` (Xử lý trả về phản hồi câu hỏi chuẩn xác).
+2. **Kiểm thử Biên dịch Frontend Next.js (`npm run build`):**
+   - Toàn bộ 11/11 routes biên dịch thành công 100% trong 4.0s, không phát sinh bất kỳ lỗi compile hay typecheck nào:
+     - `○ /` (Dashboard tổng quan)
+     - `○ /candidates` (Danh sách ứng viên)
+     - `ƒ /candidates/[id]` (Hồ sơ ứng viên chi tiết & Pipeline)
+     - `○ /interviews` (Lịch phỏng vấn & Họp trực tuyến)
+     - `○ /evaluations` (Đánh giá năng lực AI)
+     - `○ /jobs` & `ƒ /jobs/[slug]` (Quản lý tin tuyển dụng)
+     - `○ /jobs/public` & `ƒ /apply/[jobId]` (Trang ứng tuyển công khai)
+     - `○ /reports` (Báo cáo tuyển dụng)
+
+### 19.5. Cập nhật `.gitignore` An toàn Tuyệt đối
+- Đã cấu hình loại trừ:
+  - Frontend: `node_modules/`, `.next/`, `out/`, `.turbo/`, log files (`npm-debug.log*`,...).
+  - Backend: `venv/`, `__pycache__/`, `*.pyc`, `*.db`, `*.sqlite3`.
+  - Lưu trữ tài liệu: `storage/`, `backend/storage/`, `test_assets/`, `backend/test_assets/`.
+  - Môi trường & Khóa bí mật: `.env`, `.env.*`, `*.local` (chỉ duy trì duy nhất `.env.example`).
+
+### 19.6. Bảng Checklist Tiền Chuẩn Bị (Pre-flight Checklist)
+| Hạng mục kiểm tra | Tiêu chuẩn kỹ thuật | Trạng thái | Ghi chú nghiệm thu |
+| :--- | :--- | :---: | :--- |
+| **Thư mục `api/index.py`** | Đặt đúng vị trí `api/index.py`, khởi tạo FastAPI app | ✅ **ĐẠT** | Đã cấu hình và test 200 OK các route health/chat/docs |
+| **Tệp `requirements.txt`** | Tinh gọn, không chứa torch/transformers, < 250MB | ✅ **ĐẠT** | Đã chọn lọc Cloud SDKs, dung lượng an toàn |
+| **Cấu hình `next.config.mjs`** | Ánh xạ `/api/:path*` chính xác theo dev/Vercel | ✅ **ĐẠT** | Tự động thích ứng môi trường Vercel, Docker và Local |
+| **Tệp `vercel.json`** | Khai báo build command, memory 1024MB, maxDuration 60s | ✅ **ĐẠT** | Đã tạo tại thư mục gốc repository |
+| **Tệp `.gitignore`** | Đã thêm `.env*`, `venv/`, `__pycache__/`, `.next/`, `node_modules/`, `storage/` | ✅ **ĐẠT** | Git status sạch sẽ, không lộ file rác và bí mật |
+| **Test build Next.js** | Lệnh `npm run build` không phát sinh lỗi compile | ✅ **ĐẠT** | 11/11 trang hoàn thành Static Optimization |
+| **Chuẩn bị sẵn API Keys** | Đầy đủ khóa môi trường trong `.env.example` | ✅ **ĐẠT** | Đã bổ sung biến môi trường Vercel, Gemini, Neon/Supabase DB |
+
 ---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*

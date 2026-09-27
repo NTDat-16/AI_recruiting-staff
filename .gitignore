@@ -210,15 +210,12 @@ next-env.d.ts
 # =======================================================
 storage/
 */storage/
+backend/storage/
 test_assets/
 */test_assets/
-*.pdf
-*.docx
-*.mp3
-*.wav
-*.m4a
-*.webm
-*.ogg
+backend/test_assets/
+storage/**/*.*
+test_assets/**/*.*
 
 # =======================================================
 # Environment Variables & Secrets (Keep .env.example)
