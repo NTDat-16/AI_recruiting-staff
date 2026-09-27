@@ -13,16 +13,32 @@ logger = logging.getLogger("app.database")
 Base = declarative_base()
 
 # Async Engine setup
-# If running locally without PostgreSQL container started yet, allow SQLite fallback for instant zero-dependency tests
 DB_URL = settings.DATABASE_URL
+connect_args = {}
+
 if os.getenv("USE_SQLITE", "false").lower() == "true":
     DB_URL = "sqlite+aiosqlite:///./recruiting.db"
     SYNC_DB_URL = "sqlite:///./recruiting.db"
 else:
-    SYNC_DB_URL = settings.SYNC_DATABASE_URL
+    SYNC_DB_URL = getattr(settings, "SYNC_DATABASE_URL", None) or settings.DATABASE_URL
+    # Normalize PostgreSQL URL to asyncpg driver
+    if DB_URL.startswith("postgres://"):
+        DB_URL = DB_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif DB_URL.startswith("postgresql://") and not DB_URL.startswith("postgresql+asyncpg://"):
+        DB_URL = DB_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    # Clean query parameters for asyncpg & handle SSL
+    if "?" in DB_URL:
+        base_part, query_part = DB_URL.split("?", 1)
+        if "sslmode=require" in query_part or "ssl=true" in query_part or "neon.tech" in base_part:
+            connect_args["ssl"] = True
+        DB_URL = base_part
+    elif "neon.tech" in DB_URL or "amazonaws.com" in DB_URL or "supabase.co" in DB_URL:
+        connect_args["ssl"] = True
 
 async_engine = create_async_engine(
     DB_URL,
+    connect_args=connect_args,
     echo=False,
     future=True,
     pool_pre_ping=True,
@@ -76,6 +92,12 @@ async def init_db() -> None:
             logger.info("   - Database: %s", db_name)
             logger.info("   - Engine: %s (%s)", async_engine.name, pg_ver)
             logger.info("   - URL: %s", sanitized_url)
+
+            # Kích hoạt extension vector nếu sử dụng PostgreSQL
+            try:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            except Exception as ext_err:
+                logger.warning("Không thể kích hoạt extension vector (có thể do quyền hạn hoặc SQLite): %s", ext_err)
 
             # Tự động tạo các bảng nếu chưa có
             await conn.run_sync(target_metadata.create_all)

@@ -914,5 +914,51 @@ requests.js:1  POST http://localhost:8000/api/v1/candidates/apply net::ERR_FAILE
 4. **Kiểm tra biên dịch Next.js:**
    - Lệnh `npm run build` chạy thành công 100% (11/11 static & dynamic pages).
 
+
+---
+
+## 23. BÁO CÁO HOÀN THÀNH ĐƯA TOÀN BỘ BẢNG CSDL VÀ DỮ LIỆU LÊN NEON POSTGRESQL
+*(Thực hiện chuyển đổi schema, kích hoạt extension pgvector, tạo 8 bảng quan hệ và nạp dữ liệu mẫu ban đầu)*
+
+### 23.1. Tối ưu hóa Kết nối AsyncPG & SSL cho Neon
+1. **Thách thức:** URL kết nối mặc định của Neon có định dạng:
+   `postgresql://neondb_owner:***@ep-morning-band-b33bembd-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`
+   - Driver `asyncpg` của SQLAlchemy không hỗ trợ tham số `sslmode=require` trong query string URL (gây lỗi `TypeError: connect() got an unexpected keyword argument 'sslmode'`).
+   - Nếu không có tiền tố `+asyncpg`, SQLAlchemy mặc định tải driver đồng bộ `psycopg2` gây lỗi xung đột async.
+2. **Khắc phục triệt để trong `api/app/core/database.py`:**
+   - Tự động chuẩn hóa tiền tố: `postgresql://` ➔ `postgresql+asyncpg://`.
+   - Tự động bóc tách query string và truyền tham số SSL chuyên biệt: `connect_args={"ssl": True}` khi phát hiện kết nối Cloud (Neon/AWS/Supabase).
+   - Tự động kích hoạt extension `vector` trước khi tạo các bảng quan hệ.
+
+### 23.2. Kết quả Khởi tạo Schema & Kích hoạt Extension
+- **Extension Vector:** Kích hoạt thành công `vector` phiên bản `0.8.6` trên Neon Serverless Postgres.
+- **Danh sách 8 bảng CSDL đã được tạo lập thành công:**
+  1. `companies`: Thông tin doanh nghiệp và gói dịch vụ.
+  2. `users`: Tài khoản quản trị HR và người phỏng vấn.
+  3. `job_postings`: Tin tuyển dụng và trọng số tiêu chí AI.
+  4. `candidates`: Hồ sơ ứng viên, kỹ năng, kinh nghiệm và vector embedding.
+  5. `applications`: Đơn ứng tuyển, trạng thái Pipeline Kanban và điểm số AI match.
+  6. `interviews`: Lịch phỏng vấn, phòng họp trực tuyến Jitsi và trạng thái xác nhận.
+  7. `interview_evaluations`: Bản ghi âm, biên bản transcript và đánh giá năng lực AI.
+  8. `email_logs`: Nhật ký theo dõi gửi email tự động.
+
+### 23.3. Nạp Dữ liệu Mẫu Thực tế (Seed Production Data)
+- Đã thực thi script nạp dữ liệu chuẩn tiếng Việt:
+  - 1 Doanh nghiệp: `AI Recruiting Demo Corp`
+  - 1 Tài khoản HR Demo: `demo.hr@recruiting.vn` (Mật khẩu: `Demo123456@`)
+  - 3 Tin tuyển dụng: `Senior Python AI Engineer`, `Frontend Next.js Engineer (React 19)`, `DevOps & Cloud Infrastructure Lead`
+  - 7 Hồ sơ ứng viên phân bổ đầy đủ trên các cột Kanban: `Mới ứng tuyển`, `Đang duyệt`, `Mời phỏng vấn`, `Đã phỏng vấn`, `Gửi Offer`, `Trúng tuyển`, `Talent Pool`.
+  - 2 Lịch phỏng vấn video trực tuyến thực tế.
+
+### 23.4. Nghiệm thu Kiểm thử API với CSDL Neon
+- Kiểm tra endpoint tổng quan: `GET /api/v1/candidates/overview/stats`
+  - **Trạng thái:** `HTTP 200 OK`
+  - **Dữ liệu thực nhận:**
+    - `total_jobs`: 3
+    - `total_candidates`: 7
+    - `total_interviews`: 2
+    - `average_match_score`: 86.9%
+    - `pipeline_funnel`: `{new: 1, reviewing: 1, interview_invited: 1, interviewed: 1, offered: 1, hired: 1, talent_pool: 1}`
+
 ---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*
