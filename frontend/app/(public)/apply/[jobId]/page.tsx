@@ -27,14 +27,15 @@ export default function ApplyJobPage({ params }: { params: Promise<{ jobId: stri
 
     const formData = new FormData();
     formData.append("job_id", resolvedParams.jobId);
-    formData.append("company_id", "default"); // Handled by backend job mapping
     formData.append("full_name", fullName);
     formData.append("email", email);
     if (phone) formData.append("phone", phone);
     if (file) formData.append("cv_file", file);
 
     try {
-      const res = await fetch("/api/v1/candidates/apply", {
+      const apiEndpoint = "/api/v1/candidates/apply";
+
+      const res = await fetch(apiEndpoint, {
         method: "POST",
         body: formData,
       });

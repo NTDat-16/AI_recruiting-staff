@@ -8,6 +8,8 @@ import { Modal } from "@/components/ui/modal";
 
 export default function CandidatesPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [filterJobId, setFilterJobId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
@@ -21,7 +23,11 @@ export default function CandidatesPage() {
 
   const fetchCandidates = async () => {
     try {
-      const res = await fetch("/api/v1/candidates");
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/v1/candidates", { headers });
       if (res.ok) {
         const data = await res.json();
         setCandidates(data);
@@ -33,8 +39,24 @@ export default function CandidatesPage() {
     }
   };
 
+  const fetchJobs = async () => {
+    try {
+      const res = await fetch("/api/v1/jobs/public");
+      if (res.ok) {
+        const data = await res.json();
+        setJobs(data);
+        if (data.length > 0) {
+          setJobId(data[0].id);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     fetchCandidates();
+    fetchJobs();
   }, []);
 
   const handleStatusChange = async (
@@ -43,9 +65,13 @@ export default function CandidatesPage() {
     newStatus: PipelineStatus
   ) => {
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       await fetch(`/api/v1/candidates/applications/${applicationId}/pipeline-status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ status: newStatus }),
       });
       fetchCandidates();
@@ -59,16 +85,21 @@ export default function CandidatesPage() {
     if (!file || !fullName || !email) return;
 
     setUploading(true);
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const formData = new FormData();
     formData.append("full_name", fullName);
     formData.append("email", email);
     formData.append("phone", phone);
-    formData.append("job_id", jobId || "default");
+    formData.append("job_id", jobId || (jobs[0]?.id) || "default");
     formData.append("cv_file", file);
 
     try {
       const res = await fetch("/api/v1/candidates/upload-cv", {
         method: "POST",
+        headers,
         body: formData,
       });
       if (res.ok) {
@@ -81,6 +112,11 @@ export default function CandidatesPage() {
       setUploading(false);
     }
   };
+
+  const filteredCandidates = candidates.filter((c) => {
+    if (filterJobId === "all") return true;
+    return c.applications?.some((a) => a.job_posting_id === filterJobId);
+  });
 
   return (
     <div className="space-y-6">
@@ -98,10 +134,40 @@ export default function CandidatesPage() {
         </div>
       </div>
 
+      {/* Filter by Job selector */}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-3.5 rounded-xl border border-slate-200">
+        <span className="text-xs font-semibold text-slate-700">Lọc theo vị trí tuyển dụng:</span>
+        <select
+          value={filterJobId}
+          onChange={(e) => setFilterJobId(e.target.value)}
+          className="text-xs border border-slate-300 rounded-lg px-3 py-1.5 bg-white text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        >
+          <option value="all">Tất cả vị trí tuyển dụng ({candidates.length} ứng viên)</option>
+          {jobs.map((j) => {
+            const count = candidates.filter((c) =>
+              c.applications?.some((a) => a.job_posting_id === j.id)
+            ).length;
+            return (
+              <option key={j.id} value={j.id}>
+                {j.title} ({count} ứng viên)
+              </option>
+            );
+          })}
+        </select>
+        {filterJobId !== "all" && (
+          <button
+            onClick={() => setFilterJobId("all")}
+            className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer ml-1"
+          >
+            ✕ Bỏ lọc
+          </button>
+        )}
+      </div>
+
       {loading ? (
         <div className="text-center py-12 text-slate-400">Đang tải pipeline ứng viên...</div>
       ) : (
-        <CandidatePipeline candidates={candidates} onStatusChange={handleStatusChange} />
+        <CandidatePipeline candidates={filteredCandidates} onStatusChange={handleStatusChange} />
       )}
 
       {/* Upload CV Modal */}
@@ -111,6 +177,21 @@ export default function CandidatesPage() {
         title="HR Tải Lên Hồ Sơ Ứng Viên"
       >
         <form onSubmit={handleUploadCV} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Vị trí tuyển dụng (Từ CSDL) *</label>
+            <select
+              value={jobId}
+              onChange={(e) => setJobId(e.target.value)}
+              className="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.title} ({j.department || "Engineering"})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Họ và tên *</label>
             <input

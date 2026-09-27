@@ -1,56 +1,111 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { TranscriptViewer } from "@/components/evaluation/TranscriptViewer";
-import { TranscriptSegment } from "@/types";
+import { TranscriptSegment, Interview } from "@/types";
 
 export default function EvaluationsDashboardPage() {
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [selectedInterviewId, setSelectedInterviewId] = useState<string>("");
   const [audioConsent, setAudioConsent] = useState(true);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [hasReport, setHasReport] = useState(true);
 
-  // Mock initial demo transcript
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([
     {
       speaker: "Interviewer (HR)",
-      start_time: 0,
-      end_time: 15,
-      text: "Chào bạn, cảm ơn bạn đã tham gia buổi phỏng vấn hôm nay. Bạn có thể giới thiệu ngắn gọn về kinh nghiệm với FastAPI và hệ thống phân tán?",
+      start_time: 0.0,
+      end_time: 12.0,
+      text: "Chào anh Huy, cảm ơn anh đã tham gia buổi phỏng vấn vị trí DevOps Lead hôm nay.",
     },
     {
       speaker: "Candidate",
-      start_time: 16,
-      end_time: 68,
-      text: "Dạ vâng chào anh/chị. Em có hơn 3 năm làm việc với Python và 2 năm chuyên sâu về FastAPI. Ở dự án gần nhất, em thiết kế hệ thống xử lý tin nhắn và phân tích dữ liệu ứng viên bằng Celery worker và Redis queue...",
+      start_time: 13.0,
+      end_time: 45.0,
+      text: "Chào anh, tôi có 4 năm kinh nghiệm quản trị hạ tầng đám mây AWS và điều phối container với Kubernetes.",
     },
     {
       speaker: "Interviewer (Tech Lead)",
-      start_time: 69,
-      end_time: 92,
-      text: "Rất tốt. Vậy khi gặp hiện tượng database lock hoặc spike tải bất ngờ trên PostgreSQL, bạn đã áp dụng những chiến lược tối ưu nào?",
+      start_time: 46.0,
+      end_time: 68.0,
+      text: "Anh có thể giải thích cách cấu hình HPA và tối ưu chi phí hạ tầng trên EKS?",
     },
     {
       speaker: "Candidate",
-      start_time: 93,
-      end_time: 154,
-      text: "Em đã cấu hình connection pool với PgBouncer, đánh chỉ mục partial index trên các cột trạng thái truy vấn thường xuyên và sử dụng Redis để cache kết quả truy vấn đọc nhiều.",
+      start_time: 69.0,
+      end_time: 120.0,
+      text: "Tôi kết hợp Karpenter để autoscaling node linh hoạt dựa trên Spot Instances, kèm theo HPA dựa trên custom metrics từ Prometheus.",
     },
   ]);
 
+  const [aiRating, setAiRating] = useState<number>(8.9);
+  const [aiRecommendation, setAiRecommendation] = useState<string>("Pass - Chuyển sang họp hội đồng Offer");
+
+  useEffect(() => {
+    const fetchInterviews = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch("/api/v1/interviews", { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setInterviews(data);
+          if (data.length > 0) {
+            setSelectedInterviewId(data[0].id);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchInterviews();
+  }, []);
+
   const handleAudioUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!audioFile || !audioConsent) return;
+    if (!audioFile || !audioConsent || !selectedInterviewId) return;
     setAnalyzing(true);
-    // Simulate audio upload and STT + AI processing
-    setTimeout(() => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const formData = new FormData();
+      formData.append("interview_id", selectedInterviewId);
+      formData.append("candidate_consent", String(audioConsent));
+      formData.append("audio_file", audioFile);
+
+      const res = await fetch("/api/v1/evaluations/upload-audio", {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      if (res.ok) {
+        const report = await res.json();
+        if (report.transcript && Array.isArray(report.transcript)) {
+          setTranscript(report.transcript);
+        }
+        if (report.ai_rating) {
+          setAiRating(report.ai_rating);
+        }
+        if (report.ai_recommendation) {
+          setAiRecommendation(report.ai_recommendation);
+        }
+        setHasReport(true);
+      }
+    } catch (e) {
+      console.error("Audio evaluation error:", e);
+    } finally {
       setAnalyzing(false);
-      setHasReport(true);
-    }, 1500);
+    }
   };
 
   return (
@@ -71,6 +126,21 @@ export default function EvaluationsDashboardPage() {
               subtitle="Hỗ trợ MP3, WAV, M4A"
             />
             <form onSubmit={handleAudioUpload} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Chọn Buổi Phỏng Vấn (Từ CSDL)</label>
+                <select
+                  value={selectedInterviewId}
+                  onChange={(e) => setSelectedInterviewId(e.target.value)}
+                  className="w-full text-xs text-slate-700 border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  {interviews.map((itv) => (
+                    <option key={itv.id} value={itv.id}>
+                      {itv.title} ({itv.format} - {itv.confirmation_status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Chọn file âm thanh</label>
                 <input

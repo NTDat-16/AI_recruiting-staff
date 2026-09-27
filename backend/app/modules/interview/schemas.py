@@ -48,3 +48,23 @@ class InterviewResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CandidateEmailClassifyRequest(BaseModel):
+    email_content: str = Field(..., description="Nội dung email phản hồi từ ứng viên")
+    auto_apply: bool = Field(True, description="Tự động cập nhật trạng thái phỏng vấn và ứng viên")
+
+
+class CandidateEmailClassifyResponse(BaseModel):
+    interview_id: str
+    candidate_id: str
+    candidate_name: str
+    classification: str
+    confidence: float
+    sentiment: str
+    summary: str
+    reason: Optional[str] = None
+    proposed_time: Optional[str] = None
+    applied_interview_status: str
+    applied_candidate_status: Optional[str] = None
+    message: str

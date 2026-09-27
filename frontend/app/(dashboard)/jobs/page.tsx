@@ -28,10 +28,21 @@ export default function JobsDashboardPage() {
 
   const fetchJobs = async () => {
     try {
-      const res = await fetch("/api/v1/jobs");
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      let res = await fetch("/api/v1/jobs", { headers });
       if (res.ok) {
         const data = await res.json();
         setJobs(data);
+        return;
+      }
+      // Fallback to public jobs if not yet logged in or different role
+      const pubRes = await fetch("/api/v1/jobs/public");
+      if (pubRes.ok) {
+        const pubData = await pubRes.json();
+        setJobs(pubData);
       }
     } catch (e) {
       console.error(e);
@@ -48,6 +59,10 @@ export default function JobsDashboardPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const payload = {
         title,
         department,
@@ -65,7 +80,7 @@ export default function JobsDashboardPage() {
 
       const res = await fetch("/api/v1/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
       });
 
@@ -81,12 +96,18 @@ export default function JobsDashboardPage() {
   };
 
   const handlePublish = async (id: string) => {
-    await fetch(`/api/v1/jobs/${id}/publish`, { method: "POST" });
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    await fetch(`/api/v1/jobs/${id}/publish`, { method: "POST", headers });
     fetchJobs();
   };
 
   const handleClose = async (id: string) => {
-    await fetch(`/api/v1/jobs/${id}/close`, { method: "POST" });
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    await fetch(`/api/v1/jobs/${id}/close`, { method: "POST", headers });
     fetchJobs();
   };
 

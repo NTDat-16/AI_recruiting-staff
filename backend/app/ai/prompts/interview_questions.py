@@ -17,5 +17,13 @@ Hồ sơ CV tóm tắt:
 {cv_summary}
 
 Hãy tạo 5-8 câu hỏi phỏng vấn sắc bén nhất, kèm giải thích lý do nên hỏi và điểm kỳ vọng khi ứng viên trả lời.
-Trả về định dạng JSON khớp với schema InterviewQuestionsResponse.
+Trả về định dạng JSON thuần khớp với cấu trúc sau:
+- candidate_name (string): Họ tên ứng viên
+- target_role (string): Vị trí ứng tuyển
+- questions: danh sách các câu hỏi, mỗi câu hỏi gồm:
+  * category (string): Kỹ thuật | Giải quyết vấn đề | Văn hóa & Giao tiếp
+  * question (string): Nội dung câu hỏi
+  * rationale (string): Lý do hỏi câu này
+  * expected_answer_points (list of string): Các ý cốt lõi mong đợi trong câu trả lời
+  * difficulty (string): easy | medium | hard
 """

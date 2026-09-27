@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Optional
 import uuid
 from sqlalchemy import Column, String, Text, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
@@ -16,6 +17,7 @@ class Candidate(Base):
     phone = Column(String(50), nullable=True)
     
     cv_file_url = Column(String(500), nullable=True)
+    avatar_url = Column(String(500), nullable=True)
     raw_text = Column(Text, nullable=True)
     
     # Structured parsed data: education, experience, skills, certifications
@@ -33,7 +35,12 @@ class Candidate(Base):
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
-    applications = relationship("Application", back_populates="candidate", cascade="all, delete-orphan")
+    applications = relationship(
+        "Application",
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+        order_by="desc(Application.created_at)",
+    )
 
 
 class Application(Base):
@@ -62,3 +69,9 @@ class Application(Base):
     job_posting = relationship("JobPosting", back_populates="applications")
     candidate = relationship("Candidate", back_populates="applications")
     interviews = relationship("Interview", back_populates="application", cascade="all, delete-orphan")
+
+    @property
+    def job_title(self) -> Optional[str]:
+        if "job_posting" in self.__dict__ and self.job_posting:
+            return getattr(self.job_posting, "title", None)
+        return None

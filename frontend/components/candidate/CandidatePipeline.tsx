@@ -4,6 +4,7 @@ import React from "react";
 import { Candidate, PipelineStatus } from "@/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CandidateAvatar } from "@/components/candidate/CandidateAvatar";
 import { formatScore, getScoreColor } from "@/lib/utils/formatters";
 import Link from "next/link";
 
@@ -57,20 +58,38 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                 </div>
               ) : (
                 stageCandidates.map((candidate) => {
-                  const app = candidate.applications.find((a) => a.status === stage.key);
+                  const sortedApps = [...(candidate.applications || [])].sort(
+                    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                  );
+                  const app = sortedApps.find((a) => a.status === stage.key) || sortedApps[0];
                   return (
                     <Card
                       key={candidate.id}
                       className="p-3.5 hover:shadow-md transition-shadow cursor-pointer border-slate-200"
                     >
                       <Link href={`/candidates/${candidate.id}`}>
-                        <div className="flex items-start justify-between">
-                          <h5 className="text-sm font-semibold text-slate-900 hover:text-indigo-600">
-                            {candidate.full_name}
-                          </h5>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <CandidateAvatar
+                              src={candidate.avatar_url}
+                              name={candidate.full_name}
+                              size="sm"
+                            />
+                            <div className="min-w-0">
+                              <h5 className="text-sm font-semibold text-slate-900 hover:text-indigo-600 truncate">
+                                {candidate.full_name}
+                              </h5>
+                              <p className="text-[11px] text-slate-500 truncate">{candidate.email}</p>
+                              {app?.job_title && (
+                                <p className="text-[11px] text-indigo-600 font-medium truncate mt-0.5">
+                                  📌 {app.job_title}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                           {app?.match_score !== undefined && (
                             <span
-                              className={`text-xs font-bold px-1.5 py-0.5 rounded border ${getScoreColor(
+                              className={`text-xs font-bold px-1.5 py-0.5 rounded border shrink-0 ${getScoreColor(
                                 app.match_score
                               )}`}
                             >
@@ -78,7 +97,6 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 mt-1 truncate">{candidate.email}</p>
                       </Link>
 
                       {/* Tags */}

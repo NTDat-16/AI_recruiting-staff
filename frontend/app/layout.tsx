@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { AuthInitializer } from "@/components/auth/AuthInitializer";
 
 export const metadata: Metadata = {
   title: "AI Recruiting Platform - Tuyển Dụng Thông Minh",
@@ -15,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+        <AuthInitializer />
         {/* Navigation Bar */}
         <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">

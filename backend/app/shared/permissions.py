@@ -42,6 +42,22 @@ async def get_current_token_payload(token: Optional[str] = Depends(oauth2_scheme
         raise UnauthorizedException("Could not validate credentials")
 
 
+async def get_optional_token_payload(token: Optional[str] = Depends(oauth2_scheme)) -> Optional[TokenData]:
+    if not token:
+        return None
+    try:
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+        role = payload.get("role")
+        company_id = payload.get("company_id")
+        email = payload.get("email", "")
+        if user_id is None:
+            return None
+        return TokenData(user_id=user_id, email=email, role=role, company_id=company_id)
+    except Exception:
+        return None
+
+
 class RequireRoles:
     def __init__(self, allowed_roles: List[UserRole]):
         self.allowed_roles = [r.value if isinstance(r, UserRole) else r for r in allowed_roles]

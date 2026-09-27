@@ -23,7 +23,7 @@ async def test_candidate_apply_and_ai_matching(client: AsyncClient):
     company_id = login_res.json()["company_id"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    # 2. Create Job
+    # 2. Create Job (Default Status: Draft)
     job_res = await client.post(
         "/api/v1/jobs",
         json={
@@ -35,7 +35,25 @@ async def test_candidate_apply_and_ai_matching(client: AsyncClient):
     )
     job_id = job_res.json()["id"]
 
-    # 3. Candidate apply
+    # 3. Verify Draft Job Rejects Candidate Application (Requirement 2)
+    draft_apply = await client.post(
+        "/api/v1/candidates/apply",
+        data={
+            "job_id": job_id,
+            "company_id": company_id,
+            "full_name": "Pham Van AI",
+            "email": "phamvana@gmail.com",
+            "phone": "0988776655",
+        },
+    )
+    assert draft_apply.status_code == 400
+    assert "không mở nhận hồ sơ" in draft_apply.json().get("detail", "")
+
+    # 4. Publish Job
+    pub_res = await client.post(f"/api/v1/jobs/{job_id}/publish", headers=headers)
+    assert pub_res.status_code == 200
+
+    # 5. Candidate Apply Successfully to Published Job
     apply_res = await client.post(
         "/api/v1/candidates/apply",
         data={

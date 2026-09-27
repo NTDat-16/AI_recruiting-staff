@@ -1,49 +1,74 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function ReportsDashboardPage() {
+  const [statsData, setStatsData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch("/api/v1/candidates/overview/stats", { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setStatsData(data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const totalCandidates = statsData?.total_candidates || 1;
+  const funnel = statsData?.pipeline_funnel || {};
+  const totalApps = (funnel.new || 0) + (funnel.reviewing || 0) + (funnel.interview_invited || 0) + (funnel.interviewed || 0) + (funnel.offered || 0) + (funnel.hired || 0) + (funnel.talent_pool || 0) || totalCandidates;
+
   const funnelSteps = [
-    { label: "Nộp CV", count: 120, percent: "100%", color: "bg-indigo-600" },
-    { label: "Sàng lọc CV (AI >= 70%)", count: 54, percent: "45%", color: "bg-indigo-500" },
-    { label: "Phỏng vấn chuyên môn", count: 22, percent: "18.3%", color: "bg-amber-500" },
-    { label: "Gửi Thư Mời (Offer)", count: 8, percent: "6.7%", color: "bg-emerald-500" },
-    { label: "Gia nhập (Hired)", count: 6, percent: "5.0%", color: "bg-teal-600" },
+    { label: "Nộp hồ sơ CV", count: totalApps, percent: "100%", color: "bg-indigo-600" },
+    { label: "Sàng lọc & Đang xem xét", count: (funnel.reviewing || 0) + (funnel.interview_invited || 0) + (funnel.interviewed || 0) + (funnel.offered || 0) + (funnel.hired || 0), percent: `${Math.round((((funnel.reviewing || 0) + (funnel.interview_invited || 0) + (funnel.interviewed || 0) + (funnel.offered || 0) + (funnel.hired || 0)) / (totalApps || 1)) * 100)}%`, color: "bg-indigo-500" },
+    { label: "Phỏng vấn chuyên môn", count: (funnel.interview_invited || 0) + (funnel.interviewed || 0) + (funnel.offered || 0) + (funnel.hired || 0), percent: `${Math.round((((funnel.interview_invited || 0) + (funnel.interviewed || 0) + (funnel.offered || 0) + (funnel.hired || 0)) / (totalApps || 1)) * 100)}%`, color: "bg-amber-500" },
+    { label: "Gửi Thư Mời (Offer)", count: (funnel.offered || 0) + (funnel.hired || 0), percent: `${Math.round((((funnel.offered || 0) + (funnel.hired || 0)) / (totalApps || 1)) * 100)}%`, color: "bg-emerald-500" },
+    { label: "Gia nhập (Hired)", count: funnel.hired || 0, percent: `${Math.round(((funnel.hired || 0) / (totalApps || 1)) * 100)}%`, color: "bg-teal-600" },
   ];
 
-  const sourceBreakdown = [
-    { source: "Cổng tuyển dụng Website trực tiếp", count: 65, percent: "54%" },
-    { source: "Giới thiệu nội bộ (Referral)", count: 28, percent: "23%" },
-    { source: "LinkedIn Jobs", count: 18, percent: "15%" },
-    { source: "Khác", count: 9, percent: "8%" },
-  ];
+  const sourceBreakdown: Array<{ source: string; count: number; percent: string }> = statsData?.sources?.length
+    ? statsData.sources
+    : [{ source: "Cổng tuyển dụng Website trực tiếp", count: totalCandidates, percent: "100%" }];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Báo Cáo & Phân Tích Tuyển Dụng</h1>
         <p className="text-xs text-slate-500 mt-1">
-          Đo lường phễu tuyển dụng (Recruitment Funnel), tỷ lệ chuyển đổi và thời gian tuyển trung bình (Time-to-Hire)
+          Dữ liệu thống kê trực tiếp từ cơ sở dữ liệu PostgreSQL về tỷ lệ chuyển đổi phễu tuyển dụng
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase">Thời gian tuyển TB (Time-to-Hire)</p>
-          <p className="text-2xl font-extrabold text-slate-900 mt-1">16.5 ngày</p>
-          <p className="text-xs text-emerald-600 mt-1">▼ Giảm 4.2 ngày nhờ AI sàng lọc</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase">Tổng số ứng viên trong CSDL</p>
+          <p className="text-2xl font-extrabold text-slate-900 mt-1">{statsData ? `${statsData.total_candidates} ứng viên` : "..."}</p>
+          <p className="text-xs text-emerald-600 mt-1">Đã lưu trữ và trích xuất vector embedding</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase">Tỷ lệ chấp nhận Offer</p>
-          <p className="text-2xl font-extrabold text-slate-900 mt-1">75%</p>
-          <p className="text-xs text-slate-500 mt-1">6 / 8 ứng viên nhận offer</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase">Lịch phỏng vấn đã tạo</p>
+          <p className="text-2xl font-extrabold text-slate-900 mt-1">{statsData ? `${statsData.total_interviews} buổi` : "..."}</p>
+          <p className="text-xs text-slate-500 mt-1">Tự động tạo phòng họp Google Meet</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase">Độ hài lòng AI Matching</p>
-          <p className="text-2xl font-extrabold text-slate-900 mt-1">4.6 / 5.0 ★</p>
-          <p className="text-xs text-indigo-600 mt-1">Đánh giá từ HR qua Human-in-the-loop</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase">Điểm phù hợp TB (AI Match)</p>
+          <p className="text-2xl font-extrabold text-slate-900 mt-1">{statsData ? `${statsData.average_match_score}%` : "..."}</p>
+          <p className="text-xs text-indigo-600 mt-1">Đánh giá khách quan bởi Gemini AI</p>
         </Card>
       </div>
 

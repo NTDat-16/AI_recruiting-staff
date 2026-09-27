@@ -24,6 +24,7 @@ async def init_test_db():
     yield
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await test_engine.dispose()
     if os.path.exists("./test_recruiting.db"):
         try:
             os.remove("./test_recruiting.db")

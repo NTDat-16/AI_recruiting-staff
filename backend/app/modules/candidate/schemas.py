@@ -42,6 +42,7 @@ class ApplicationResponse(BaseModel):
     status: str
     hr_notes: Optional[str] = None
     hr_feedback: Optional[Dict[str, Any]] = None
+    job_title: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -55,6 +56,7 @@ class CandidateResponse(BaseModel):
     full_name: str
     email: str
     phone: Optional[str] = None
+    avatar_url: Optional[str] = None
     cv_file_url: Optional[str] = None
     parsed_data: Optional[Dict[str, Any]] = None
     tags: List[str] = []

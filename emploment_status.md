@@ -310,4 +310,29 @@ Dự án hiện đã hoàn tất toàn bộ khung kiến trúc và mã nguồn n
 - [x] **Giai đoạn 4 — Tối ưu & Mở rộng:** Đã thiết lập sẵn `pgvector` và vector embeddings (`embeddings.py`) phục vụ tìm kiếm ngữ nghĩa trên Talent Pool trong tương lai, cùng bảng điều khiển báo cáo phễu tuyển dụng (Recruitment Funnel) và thời gian tuyển trung bình (Time-to-Hire).
 
 ---
+
+## 8. CẬP NHẬT MỚI: TÍCH HỢP GEMINI API, KHỞI TẠO BẢNG CSDL VÀ LOG KẾT NỐI
+
+Chi tiết thực hiện theo yêu cầu phát triển mới:
+1. **Tích hợp Gemini API Key:**
+   - Kích hoạt key `AQ.Ab8RN6JOeLRRQ2mKa3GiIMIUn_6Ggq_TYfqdzVw1KjPeZAbvkw` trong `.env`.
+   - Cập nhật model sang `gemini-3.8-flash` (thay cho `gemini-2.5-flash` đã ngừng hỗ trợ tài khoản mới) và `gemini-embedding-001` (vector 3072 chiều).
+   - Bổ sung cơ chế fallback tự động trong `backend/app/core/config.py`.
+2. **Khởi tạo Database & 8 Bảng dữ liệu ORM:**
+   - Tạo Database PostgreSQL `Ai_Recruiting_Staff` (và hỗ trợ `Ai_Recuiting_Staff`).
+   - Khởi tạo đầy đủ 8 bảng ORM: `companies`, `users`, `job_postings`, `candidates`, `applications`, `interviews`, `interview_evaluations`, `email_logs`.
+   - Tạo version migration Alembic `78c1cdf9da96_initial_schema.py` và stamp `head`.
+3. **Log thông báo khi kết nối Database thành công:**
+   - Bổ sung hàm `init_db()` trong `backend/app/core/database.py` và tích hợp vào FastAPI `lifespan` (`backend/app/main.py`).
+   - Ghi log trực quan với tên Database, phiên bản Engine, URL đã che giấu mật khẩu, và danh sách toàn bộ các bảng CSDL đã sẵn sàng.
+   - Hỗ trợ kiểm tra nhanh qua dòng lệnh: `python -m app.core.database`.
+4. **Sửa lỗi 500 khi ứng tuyển & Nâng cấp Luồng Xử lý File CV AI:**
+   - Xóa bỏ lỗi vi phạm khóa ngoại `ForeignKeyViolationError` bằng cách tự động ánh xạ `company_id` từ tin tuyển dụng (`job_postings`).
+   - Hỗ trợ tra cứu JD linh hoạt qua cả UUID và slug SEO (`job_id` hoặc `slug`).
+   - Tự động nhận file CV (.docx / .pdf), trích xuất nội dung văn bản, parse thông tin cấu trúc JSON qua Gemini, tính vector embedding 3072 chiều và tính điểm matching CV-JD có giải thích chi tiết.
+   - Lưu trữ an toàn file CV vật lý tại `storage/cvs/`.
+
+*(Xem báo cáo kỹ thuật chi tiết tại file [employee status .md](file:///c:/Users/Nguyen%20Tan%20Dat/Documents/GitHub/AI_recruiting%20staff/employee%20status%20.md))*
+
+---
 *Ghi nhận bởi Hệ thống Trợ lý Lập trình Antigravity - Dự án AI Recruiting Platform.*

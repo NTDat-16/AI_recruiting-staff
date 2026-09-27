@@ -1,25 +1,70 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CandidateAvatar } from "@/components/candidate/CandidateAvatar";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
+  const [loading, setLoading] = useState(true);
+  const [statsData, setStatsData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch("/api/v1/candidates/overview/stats", { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setStatsData(data);
+        }
+      } catch (e) {
+        console.error("Fetch dashboard stats error:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   const stats = [
-    { label: "Tin đang tuyển dụng", value: "8", change: "+2 tuần này", icon: "📢", color: "text-blue-600" },
-    { label: "CV mới tiếp nhận", value: "42", change: "+15 hôm nay", icon: "📄", color: "text-indigo-600" },
-    { label: "Lịch phỏng vấn tuần này", value: "12", change: "4 hôm nay", icon: "🗓️", color: "text-amber-600" },
-    { label: "Điểm phù hợp TB (AI Match)", value: "82%", change: "+5% so với tháng trước", icon: "🎯", color: "text-emerald-600" },
+    {
+      label: "Tin đang tuyển dụng",
+      value: statsData ? String(statsData.total_jobs) : "...",
+      change: "Đang mở nhận hồ sơ",
+      icon: "📢",
+      color: "text-blue-600",
+    },
+    {
+      label: "CV trong hệ thống",
+      value: statsData ? String(statsData.total_candidates) : "...",
+      change: "Lưu trữ PostgreSQL",
+      icon: "📄",
+      color: "text-indigo-600",
+    },
+    {
+      label: "Lịch phỏng vấn",
+      value: statsData ? String(statsData.total_interviews) : "...",
+      change: "Đã lên lịch Google Meet",
+      icon: "🗓️",
+      color: "text-amber-600",
+    },
+    {
+      label: "Điểm phù hợp TB (AI Match)",
+      value: statsData ? `${statsData.average_match_score}%` : "...",
+      change: "Tính toán bởi Gemini AI",
+      icon: "🎯",
+      color: "text-emerald-600",
+    },
   ];
 
-  const recentCandidates = [
-    { name: "Nguyễn Văn An", role: "Senior Python/FastAPI", score: 92, status: "Mời phỏng vấn", time: "10 phút trước" },
-    { name: "Trần Thị Mai", role: "Frontend Next.js Engineer", score: 85, status: "Đang xem xét", time: "1 giờ trước" },
-    { name: "Lê Hoàng Phúc", role: "AI/LLM Engineer", score: 88, status: "Đã phỏng vấn", time: "3 giờ trước" },
-    { name: "Phạm Hải Đăng", role: "DevOps Engineer", score: 64, status: "Talent Pool", time: "Hôm qua" },
-  ];
+  const recentCandidates: any[] = statsData?.recent_candidates || [];
 
   return (
     <div className="space-y-8">
@@ -69,7 +114,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader
-              title="Ứng Viên Mới Chấm Điểm Bằng AI"
+              title="Ứng Viên Mới Chấm Điểm Bằng AI (Từ PostgreSQL)"
               subtitle="Tự động phân tích CV, so khớp yêu cầu JD và xếp hạng theo % độ phù hợp"
               action={
                 <Link href="/candidates" className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">
@@ -79,26 +124,39 @@ export default function DashboardPage() {
             />
 
             <div className="divide-y divide-slate-100">
-              {recentCandidates.map((c, i) => (
-                <div key={i} className="py-3.5 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-sm">
-                      {c.name.charAt(0)}
+              {loading ? (
+                <div className="text-center py-6 text-xs text-slate-400">Đang tải dữ liệu từ CSDL...</div>
+              ) : recentCandidates.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400">Chưa có ứng viên nào trong hệ thống.</div>
+              ) : (
+                recentCandidates.map((c, i) => (
+                  <Link
+                    key={i}
+                    href={`/candidates/${c.candidate_id}`}
+                    className="py-3.5 flex items-center justify-between hover:bg-slate-50/80 -mx-3 px-3 rounded-lg transition-colors group"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <CandidateAvatar src={c.avatar_url} name={c.name} size="md" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          {c.name}
+                        </p>
+                        <p className="text-xs text-slate-500">{c.role}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{c.name}</p>
-                      <p className="text-xs text-slate-500">{c.role} • <span className="text-slate-400">{c.time}</span></p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center space-x-3">
-                    <Badge variant={c.score >= 80 ? "success" : "warning"} className="font-mono font-bold">
-                      {c.score}% Match
-                    </Badge>
-                    <span className="text-xs text-slate-600 hidden sm:inline-block">{c.status}</span>
-                  </div>
-                </div>
-              ))}
+                    <div className="flex items-center space-x-3">
+                      <Badge variant={c.score >= 80 ? "success" : "warning"} className="font-mono font-bold">
+                        {c.score}% Match
+                      </Badge>
+                      <span className="text-xs text-slate-600 hidden sm:inline-block">{c.status}</span>
+                      <span className="text-xs text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Xem chi tiết →
+                      </span>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </Card>
         </div>

@@ -10,7 +10,7 @@ from app.modules.candidate.schemas import (
     TalentPoolSearchQuery,
 )
 from app.modules.candidate.service import CandidateService
-from app.shared.permissions import get_current_token_payload, RequireRoles, UserRole, TokenData
+from app.shared.permissions import get_current_token_payload, get_optional_token_payload, RequireRoles, UserRole, TokenData
 
 router = APIRouter(prefix="/candidates", tags=["Candidates & CVs"])
 
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/candidates", tags=["Candidates & CVs"])
 @router.post("/apply", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
 async def public_apply_job(
     job_id: str = Form(...),
-    company_id: str = Form(...),
+    company_id: Optional[str] = Form(None),
     full_name: str = Form(...),
     email: str = Form(...),
     phone: Optional[str] = Form(None),
@@ -49,36 +49,68 @@ async def public_apply_job(
 @router.get(
     "",
     response_model=List[CandidateResponse],
-    dependencies=[Depends(RequireRoles([UserRole.HR, UserRole.COMPANY_ADMIN, UserRole.INTERVIEWER, UserRole.SUPER_ADMIN]))],
 )
 async def list_candidates(
     job_id: Optional[str] = None,
     status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    current_user: TokenData = Depends(get_current_token_payload),
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
     db: AsyncSession = Depends(get_db),
 ):
     """Danh sách ứng viên trong pipeline (có phân trang & lọc theo JD / trạng thái)."""
+    company_id = current_user.company_id if current_user else None
     return await CandidateService.list_candidates(
-        db, company_id=current_user.company_id, job_id=job_id, status=status, skip=skip, limit=limit
+        db, company_id=company_id, job_id=job_id, status=status, skip=skip, limit=limit
     )
+
+
+@router.get("/overview/stats")
+async def get_overview_stats(
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """Thống kê tổng quan thực tế từ CSDL phục vụ Dashboard: số JD, ứng viên, phỏng vấn, điểm TB AI, phễu tuyển dụng."""
+    company_id = current_user.company_id if current_user else None
+    return await CandidateService.get_overview_stats(db, company_id=company_id)
 
 
 @router.get(
     "/{candidate_id}",
     response_model=CandidateResponse,
-    dependencies=[Depends(RequireRoles([UserRole.HR, UserRole.COMPANY_ADMIN, UserRole.INTERVIEWER, UserRole.SUPER_ADMIN]))],
 )
 async def get_candidate_detail(
     candidate_id: str,
-    current_user: TokenData = Depends(get_current_token_payload),
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
     db: AsyncSession = Depends(get_db),
 ):
     """Xem chi tiết hồ sơ ứng viên kèm điểm số và breakdown từ AI."""
+    company_id = current_user.company_id if current_user else None
     return await CandidateService.get_candidate(
-        db, candidate_id=candidate_id, company_id=current_user.company_id
+        db, candidate_id=candidate_id, company_id=company_id
     )
+
+
+@router.get("/{candidate_id}/avatar")
+async def get_candidate_avatar(
+    candidate_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Lấy ảnh đại diện (avatar) của ứng viên nếu có trong CV."""
+    from fastapi.responses import FileResponse, Response
+    candidate = await CandidateService.get_candidate(
+        db, candidate_id=candidate_id, company_id=None
+    )
+    if not candidate or not candidate.avatar_url:
+        return Response(status_code=status.HTTP_404_NOT_FOUND, content="Candidate avatar not found")
+
+    import os
+    clean_path = candidate.avatar_url.lstrip("/")
+    file_path = os.path.join(os.getcwd(), clean_path)
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="image/jpeg")
+
+    return Response(status_code=status.HTTP_404_NOT_FOUND, content="Avatar file not found on disk")
 
 
 @router.post(
@@ -117,10 +149,13 @@ async def hr_upload_candidate_cv(
 async def update_pipeline_status(
     application_id: str,
     data: PipelineStatusUpdate,
+    current_user: TokenData = Depends(get_current_token_payload),
     db: AsyncSession = Depends(get_db),
 ):
     """Chuyển trạng thái ứng viên trong quy trình tuyển dụng (Pipeline Kanban)."""
-    return await CandidateService.update_pipeline_status(db, application_id=application_id, data=data)
+    return await CandidateService.update_pipeline_status(
+        db, application_id=application_id, data=data, company_id=current_user.company_id
+    )
 
 
 @router.post(
@@ -131,10 +166,13 @@ async def update_pipeline_status(
 async def submit_score_feedback(
     application_id: str,
     feedback: HRFeedbackCreate,
+    current_user: TokenData = Depends(get_current_token_payload),
     db: AsyncSession = Depends(get_db),
 ):
     """Human-in-the-loop: HR gửi phản hồi về độ chính xác chấm điểm của AI."""
-    return await CandidateService.submit_hr_feedback(db, application_id=application_id, feedback=feedback)
+    return await CandidateService.submit_hr_feedback(
+        db, application_id=application_id, feedback=feedback, company_id=current_user.company_id
+    )
 
 
 @router.post(

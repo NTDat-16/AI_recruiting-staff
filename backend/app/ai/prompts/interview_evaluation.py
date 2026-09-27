@@ -16,5 +16,15 @@ Tiêu chí đánh giá (Rubric):
 Biên bản transcript buổi phỏng vấn:
 {transcript_text}
 
-Hãy phân tích và trả về định dạng JSON khớp với schema InterviewEvaluationAnalysis.
+Hãy phân tích và trả về định dạng JSON thuần khớp với cấu trúc sau:
+- summary (string): Tóm tắt tổng quan buổi phỏng vấn
+- overall_rating (float 1.0-10.0): Điểm đánh giá trung bình
+- rubric_scores: danh sách tiêu chí, mỗi tiêu chí gồm:
+  * criterion (string): Tên tiêu chí đánh giá
+  * score (float 1-10): Điểm số cho tiêu chí này
+  * evidence_quote (string): Trích dẫn phát ngôn của ứng viên minh chứng cho điểm số
+  * comment (string): Nhận xét cụ thể
+- key_strengths (list of string): Điểm mạnh nổi bật của ứng viên
+- areas_for_growth (list of string): Điểm cần cải thiện
+- recommendation (string): Pass | Hold | Reject
 """

@@ -26,6 +26,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+    company_id: Optional[str] = None
     company_name: Optional[str] = None
     role: Optional[str] = "hr"
     department: Optional[str] = None

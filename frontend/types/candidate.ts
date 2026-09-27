@@ -26,6 +26,7 @@ export interface ScoreBreakdown {
 export interface Application {
   id: string;
   job_posting_id: string;
+  job_title?: string;
   candidate_id: string;
   match_score?: number;
   score_breakdown?: ScoreBreakdown;
@@ -45,6 +46,7 @@ export interface Candidate {
   full_name: string;
   email: string;
   phone?: string;
+  avatar_url?: string;
   cv_file_url?: string;
   parsed_data?: Record<string, any>;
   tags: string[];

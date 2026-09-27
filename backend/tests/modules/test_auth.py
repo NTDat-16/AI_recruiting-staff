@@ -18,7 +18,7 @@ async def test_auth_flow(client: AsyncClient):
         "password": "Password123!",
         "full_name": "Tran Thi HR",
         "company_name": "Tech Corp Vietnam",
-        "role": "hr",
+        "role": "super_admin",
         "department": "Human Resources",
     }
     reg_res = await client.post("/api/v1/auth/register", json=reg_payload)

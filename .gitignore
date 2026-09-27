@@ -179,3 +179,68 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Database files
+*.db
+*.sqlite3
+
+# =======================================================
+# Node.js & Frontend Dependencies (node_modules, logs)
+# =======================================================
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+package-lock.json
+
+# =======================================================
+# Next.js Build Outputs & Cache
+# =======================================================
+.next/
+*/.next/
+out/
+.turbo/
+next-env.d.ts
+
+# =======================================================
+# Application Storage (Uploaded CVs, Avatars, Audios)
+# =======================================================
+storage/
+*/storage/
+test_assets/
+*/test_assets/
+*.pdf
+*.docx
+*.mp3
+*.wav
+*.m4a
+*.webm
+*.ogg
+
+# =======================================================
+# Environment Variables & Secrets (Keep .env.example)
+# =======================================================
+.env
+.env.*
+!.env.example
+*.local
+
+# =======================================================
+# Test Reports & Temporary Benchmark Scripts
+# =======================================================
+*report*.json
+*summary*.json
+backend/test_interview_email_flow.py
+
+# =======================================================
+# IDEs & OS System Files
+# =======================================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini

@@ -24,19 +24,22 @@ class AuthService:
         if existing:
             raise BadRequestException("Email is already registered")
 
-        company_id = None
-        if data.company_name:
+        company_id = data.company_id
+        if not company_id and data.company_name:
             company = Company(name=data.company_name)
             db.add(company)
             await db.flush()
             company_id = company.id
+
+        # Public self-registration must never grant elevated administrative roles.
+        assigned_role = data.role if data.role in ["interviewer"] else "hr"
 
         user = User(
             email=data.email,
             hashed_password=get_password_hash(data.password),
             full_name=data.full_name,
             company_id=company_id,
-            role=data.role or "hr",
+            role=assigned_role,
             department=data.department,
         )
         db.add(user)

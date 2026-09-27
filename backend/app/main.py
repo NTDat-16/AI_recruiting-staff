@@ -1,9 +1,10 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import async_engine, Base
+from app.core.database import async_engine, init_db
 from app.modules.auth.router import router as auth_router
 from app.modules.job_posting.router import router as job_router
 from app.modules.candidate.router import router as candidate_router
@@ -11,13 +12,23 @@ from app.modules.interview.router import router as interview_router
 from app.modules.evaluation.router import router as evaluation_router
 from app.modules.email.router import router as email_router
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("app.main")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Auto create tables on startup if in local dev
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Khởi tạo CSDL, kiểm tra kết nối và tạo các bảng
+    logger.info("Khởi động %s (v%s)...", settings.PROJECT_NAME, settings.VERSION)
+    await init_db()
     yield
+    # Dọn dẹp kết nối khi tắt server
+    await async_engine.dispose()
+    logger.info("Đã đóng kết nối cơ sở dữ liệu.")
 
 
 app = FastAPI(
@@ -43,6 +54,15 @@ app.include_router(candidate_router, prefix=settings.API_V1_STR)
 app.include_router(interview_router, prefix=settings.API_V1_STR)
 app.include_router(evaluation_router, prefix=settings.API_V1_STR)
 app.include_router(email_router, prefix=settings.API_V1_STR)
+
+# Mount Local Storage for Candidate Avatars & CV files
+import os
+from fastapi.staticfiles import StaticFiles
+
+storage_dir = os.path.join(os.getcwd(), "storage")
+os.makedirs(os.path.join(storage_dir, "avatars"), exist_ok=True)
+os.makedirs(os.path.join(storage_dir, "cvs"), exist_ok=True)
+app.mount("/storage", StaticFiles(directory=storage_dir), name="storage")
 
 
 @app.get("/health", tags=["Health"])

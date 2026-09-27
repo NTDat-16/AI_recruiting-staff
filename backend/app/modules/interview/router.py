@@ -7,6 +7,8 @@ from app.modules.interview.schemas import (
     InterviewUpdate,
     InterviewResponse,
     CandidateConfirmInterview,
+    CandidateEmailClassifyRequest,
+    CandidateEmailClassifyResponse,
 )
 from app.modules.interview.service import InterviewService
 from app.shared.permissions import get_current_token_payload, RequireRoles, UserRole, TokenData
@@ -94,3 +96,40 @@ async def candidate_confirm_interview(
 ):
     """Ứng viên xác nhận / đề xuất dời / từ chối lịch phỏng vấn."""
     return await InterviewService.confirm_interview_by_candidate(db, interview_id=interview_id, data=data)
+
+
+@router.post(
+    "/{interview_id}/classify-email-response",
+    response_model=CandidateEmailClassifyResponse,
+    dependencies=[Depends(RequireRoles([UserRole.HR, UserRole.COMPANY_ADMIN]))],
+)
+async def classify_candidate_email_response(
+    interview_id: str,
+    data: CandidateEmailClassifyRequest,
+    current_user: TokenData = Depends(get_current_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """Phân loại phản hồi email của ứng viên (đồng ý, từ chối, xin dời lịch) bằng AI và tự động cập nhật trạng thái."""
+    return await InterviewService.classify_email_response(
+        db,
+        interview_id=interview_id,
+        company_id=current_user.company_id,
+        email_content=data.email_content,
+        auto_apply=data.auto_apply,
+    )
+
+
+@router.post(
+    "/{interview_id}/send-invitation-email",
+    dependencies=[Depends(RequireRoles([UserRole.HR, UserRole.COMPANY_ADMIN]))],
+)
+async def send_interview_invitation_email(
+    interview_id: str,
+    current_user: TokenData = Depends(get_current_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """Phát hành hoặc gửi lại email mời phỏng vấn (kèm link phòng họp trực tuyến Jitsi Meet thực tế)."""
+    return await InterviewService.send_invitation_email(
+        db, interview_id=interview_id, company_id=current_user.company_id
+    )
+

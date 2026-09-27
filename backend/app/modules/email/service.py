@@ -6,6 +6,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.modules.email.models import EmailLog
+from app.modules.email.sender import EmailSender
 from app.modules.email.schemas import (
     EmailPreviewRequest,
     EmailPreviewItem,
@@ -125,6 +126,14 @@ class EmailService:
                 skipped_count += 1
                 continue
 
+            # Actually send email via EmailSender
+            send_res = await EmailSender.send_email(
+                to_email=item.recipient_email,
+                subject=item.subject,
+                html_body=item.body_html,
+            )
+            email_status = "sent" if send_res.get("success") else "failed"
+
             email_log = EmailLog(
                 company_id=company_id,
                 candidate_id=item.candidate_id,
@@ -134,7 +143,7 @@ class EmailService:
                 recipient_name=item.recipient_name,
                 subject=item.subject,
                 body_html=item.body_html,
-                status="sent",  # Marked as sent or handed off to celery worker
+                status=email_status,
                 sent_at=datetime.now(timezone.utc),
                 tracking_token=str(uuid.uuid4()),
             )
