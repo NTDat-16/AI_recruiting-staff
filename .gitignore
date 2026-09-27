@@ -238,4 +238,5 @@ backend/test_interview_email_flow.py
 .DS_Store
 Thumbs.db
 ehthumbs.db
-Desktop.ini
+Desktop.ini
+.neon

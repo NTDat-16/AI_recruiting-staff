@@ -862,5 +862,57 @@ requests.js:1  POST http://localhost:8000/api/v1/candidates/apply net::ERR_FAILE
      - `lib/api/interviews.ts`
      - `lib/api/jobs.ts`
 
+
+---
+
+## 22. BÁO CÁO THIẾT LẬP DỰ ÁN NEON SERVERLESS DATABASE & AGENT TOOLING
+*(Hoàn thành toàn bộ quy trình thiết lập Neon CLI, Agent Skills, MCP Server, Neon Link, Config Policy và Neon Deploy)*
+
+### 22.1. Cài đặt & Xác thực Neon CLI
+- Cài đặt thành công công cụ dòng lệnh toàn cục `neon@latest` (phiên bản `6.2.3`).
+- Hoàn tất xác thực tài khoản:
+  - **Tài khoản:** `nhuyentandat`
+  - **Email:** `nhuyentandat@gmail.com`
+  - **Họ tên:** Nguyễn Tấn
+
+### 22.2. Cài đặt Neon Agent Skills & MCP Server
+1. **Neon Agent Skills:**
+   - Đã cài đặt đầy đủ 8 bộ Agent Skills chính thức từ `neondatabase/agent-skills`:
+     - `neon`: Quản trị tổng quan Neon.
+     - `neon-ai-gateway`: Quản lý AI Gateway.
+     - `neon-auth`: Xác thực người dùng tích hợp Neon.
+     - `neon-functions`: Serverless functions trên Neon.
+     - `neon-object-storage`: Lưu trữ file và artifacts.
+     - `neon-postgres`: Tối ưu hóa truy vấn PostgreSQL.
+     - `neon-postgres-branches`: Phân nhánh dữ liệu tức thì (Database Branching).
+     - `neon-postgres-egress-optimizer`: Tối ưu băng thông truyền dữ liệu.
+2. **Neon MCP Server:**
+   - Cài đặt Neon MCP Server (`https://mcp.neon.tech/mcp`) vào toàn bộ môi trường lập trình: Antigravity, Claude Code, Codex, Gemini-CLI, VSCode, Cursor.
+
+### 22.3. Liên kết Dự án Neon (Neon Link)
+- Dự án liên kết: `quiet-mountain-65722452` ("Recuiting staff")
+- Branch được liên kết: `production` (`br-misty-voice-b3f8ssxq`) tại khu vực `aws-ap-southeast-1` (Singapore).
+- Tự động đồng bộ các biến môi trường kết nối chuẩn xác vào `.env`:
+  - `DATABASE_URL`: Đường dẫn kết nối có connection pooling.
+  - `DATABASE_URL_UNPOOLED`: Đường dẫn kết nối trực tiếp không qua pooler.
+  - `NEON_BRANCH`: `production`.
+
+### 22.4. Khởi tạo Chính sách Config & Neon Deploy
+1. **Khởi tạo `neon config init`:**
+   - Tự động cài đặt các gói phụ thuộc `@neon/config` và `@neon/env`.
+2. **Cập nhật tệp cấu hình `neon.ts`:**
+   ```ts
+   import { defineConfig } from "@neon/config/v1";
+
+   export default defineConfig({});
+   ```
+3. **Thực thi `neon deploy`:**
+   - Áp dụng chính sách lên branch `production` thành công:
+     `INFO: → Applying to branch production (br-misty-voice-b3f8ssxq)`
+     `INFO: No changes — branch production already matches the policy.`
+     `Utilized services: Postgres`
+4. **Kiểm tra biên dịch Next.js:**
+   - Lệnh `npm run build` chạy thành công 100% (11/11 static & dynamic pages).
+
 ---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*
