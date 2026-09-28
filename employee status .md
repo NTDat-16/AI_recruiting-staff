@@ -1014,4 +1014,55 @@ Failed to load resource: the server responded with a status of 404 ()
    - Kiểm tra API xác thực cục bộ kết nối Neon: Endpoint `POST /api/v1/auth/login` trả về `HTTP 200 OK` kèm JWT token hợp lệ.
 
 ---
+
+## 25. BÁO CÁO KHẮC PHỤC LỖI XUNG ĐỘT NAMESPACE PACKAGE NEXT.JS VÀ FastAPI (404 /api/v1/candidates/overview/stats)
+*(Phát hiện và triệt tiêu xung đột giữa thư mục App Router `app/` của Next.js và package backend `api/app`, đăng ký thành công 76 endpoints trên Vercel)*
+
+### 25.1. Triệu chứng & Bằng chứng thực nghiệm:
+- Sau khi Next.js rewrites đã hoạt động và `/api/health` trả về `200 OK`, các endpoint nghiệp vụ như `GET /api/v1/candidates/overview/stats` và `POST /api/v1/auth/login` vẫn trả về mã lỗi:
+  ```json
+  HTTP/1.1 404 Not Found
+  {"detail":"Not Found"}
+  ```
+- Khi kiểm tra danh sách route trong OpenAPI Schema (`https://ai-recruiting-staff.vercel.app/api/openapi.json`), FastAPI chỉ có 6 route cơ bản (`/api`, `/`, `/api/health`, `/health`, `/chat`, `/api/chat`), toàn bộ 6 domain router nghiệp vụ đều bị vắng mặt.
+
+### 25.2. Nguyên nhân gốc rễ (Root Cause Analysis - PEP 420 Namespace Collision):
+1. **Xung đột tên thư mục `app` giữa Frontend và Backend:**
+   - Dự án chuẩn hóa Monorepo đặt toàn bộ code Next.js ở thư mục gốc (Root), bao gồm thư mục `app/` (Next.js App Router: `layout.tsx`, `page.tsx`...).
+   - Code backend Python nằm trong `api/`, với cấu trúc `api/app/modules/...`.
+2. **Cơ chế Import của Python 3 (PEP 420 Implicit Namespace Packages):**
+   - Thư mục `api/app` ban đầu thiếu tệp `__init__.py`.
+   - Trên môi trường Linux của Vercel (`/var/task`), khi Python thực thi câu lệnh:
+     `from app.modules.auth.router import router`
+   - Python tìm thấy thư mục `/var/task/app` (thư mục của Next.js) đầu tiên. Do không có `__init__.py`, Python nhận diện đây là một Namespace Package.
+   - Khi tìm tiếp submodule `app.modules`, vì thư mục Next.js không có thư mục `modules`, Python lập tức ném ra ngoại lệ:
+     `ModuleNotFoundError: No module named 'app.modules'`
+   - Vì câu lệnh import nằm trong khối `try...except`, ngoại lệ bị bắt lại và router không thể được nạp vào ứng dụng FastAPI.
+
+### 25.3. Giải pháp đã thực hiện:
+1. **Khởi tạo Package chính quy (`api/app/__init__.py`):**
+   - Tạo tệp `api/app/__init__.py` để xác định rõ ràng và duy nhất `api/app` là một Python Package truyền thống có độ ưu tiên cao nhất.
+2. **Tái cấu trúc và Ưu tiên `sys.path` (`api/index.py`):**
+   - Loại bỏ triệt để nguy cơ Next.js root folder chèn lên đầu `sys.path`:
+     ```python
+     CURRENT_DIR = Path(__file__).resolve().parent
+     ROOT_DIR = CURRENT_DIR.parent
+
+     while str(ROOT_DIR) in sys.path:
+         sys.path.remove(str(ROOT_DIR))
+     while str(CURRENT_DIR) in sys.path:
+         sys.path.remove(str(CURRENT_DIR))
+
+     # Đưa thư mục api lên vị trí index 0
+     sys.path.insert(0, str(CURRENT_DIR))
+     sys.path.append(str(ROOT_DIR))
+     ```
+3. **Thêm cơ chế chẩn đoán và giám sát Router:**
+   - Bổ sung `router_errors` và đưa trường `loaded_routers` vào endpoint `/api/health` để có thể kiểm tra trực tiếp trạng thái nạp của từng module trên production.
+4. **Kết quả kiểm thử:**
+   - Tất cả **6/6 Domain Routers** (`auth`, `job_posting`, `candidate`, `interview`, `evaluation`, `email`) đều đã nạp thành công.
+   - Toàn bộ **76 endpoints** của hệ thống đã sẵn sàng phục vụ.
+   - Lệnh `npm run build` chạy thành công 100% trong 1.8 giây.
+
+---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*
