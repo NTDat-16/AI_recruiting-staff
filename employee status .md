@@ -1098,4 +1098,34 @@ sqlalchemy.exc.InvalidRequestError: The asyncio extension requires an async driv
    - Toàn bộ 6 Domain Routers nạp sạch lỗi: `router_errors: {}`.
 
 ---
+
+## 27. BÁO CÁO TÍCH HỢP CODEBASE KNOWLEDGE GRAPH MCP (codebase-memory-mcp)
+*(Cài đặt bộ công cụ trí tuệ mã nguồn cục bộ, cấu hình MCP Server cho Antigravity/VS Code/Gemini/Claude và lập chỉ mục 1,630 Nodes Knowledge Graph)*
+
+### 27.1. Cài đặt Binary & Đăng ký MCP Server:
+- Tải về và xác thực SHA-256 bản quyền chính thức `codebase-memory-mcp 0.11.0` (Windows amd64).
+- Cài đặt thực thi tại:
+  - `C:/Users/Nguyen Tan Dat/.local/bin/codebase-memory-mcp.exe`
+  - `C:/Users/Nguyen Tan Dat/AppData/Local/Programs/codebase-memory-mcp/codebase-memory-mcp.exe`
+- Đã đăng ký cấu hình MCP Server Stdio đa nền tảng:
+  - **Antigravity Global:** `C:/Users/Nguyen Tan Dat/.gemini/config/mcp_config.json`
+  - **VS Code:** `C:/Users/Nguyen Tan Dat/AppData/Roaming/Code/User/mcp.json`
+  - **Gemini CLI:** `C:/Users/Nguyen Tan Dat/.gemini/settings.json`
+  - **Claude Code:** `C:/Users/Nguyen Tan Dat/.claude.json`
+  - **Windsurf:** `C:/Users/Nguyen Tan Dat/.codeium/windsurf/mcp_config.json`
+  - **Copilot CLI:** `C:/Users/Nguyen Tan Dat/.copilot/mcp-config.json`
+
+### 27.2. Kết quả Lập chỉ mục Dự án (Index Repository):
+- Khởi tạo chỉ mục dự án `AI_recruiting-staff`:
+  - **Tổng số Nodes tri thức:** 1,630 nodes
+  - **Tổng số Edges quan hệ:** 4,476 edges
+  - **Ngôn ngữ nhận diện:** Python (76 files), TypeScript (38 files), HTML, YAML, SQL, CSS
+  - **Phân loại phần tử:** 190 Functions, 105 Classes, 97 Methods, 88 Routes, 162 Modules, 25 Interfaces, 9 Database Tables
+  - **Liên kết đồ thị:** 2,163 DEFINES, 518 CALLS, 470 USAGES, 320 IMPORTS, 60 HTTP_CALLS, 52 DEPENDS_ON
+- Thiết lập tự động cập nhật:
+  - `auto_index = true`: Tự động tái lập chỉ mục khi có thay đổi.
+  - `auto_watch = true`: Theo dõi file thay đổi qua Git nền.
+  - `ui_enabled = true`: Cung cấp giao diện 3D Graph Visualization tại cổng `http://localhost:9749`.
+
+---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*
