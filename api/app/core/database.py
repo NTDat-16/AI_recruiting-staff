@@ -12,29 +12,50 @@ logger = logging.getLogger("app.database")
 # Base class for SQLAlchemy models
 Base = declarative_base()
 
-# Async Engine setup
-DB_URL = settings.DATABASE_URL
-connect_args = {}
+def normalize_db_url(raw_url: str) -> tuple[str, dict]:
+    """
+    Chuẩn hóa kết nối CSDL bất đồng bộ (asyncpg) tuyệt đối an toàn.
+    Loại bỏ dấu nháy, khoảng trắng, bóc tách query parameter không tương thích,
+    và ép buộc driver postgresql+asyncpg để không bao giờ bị rơi về driver psycopg2 đồng bộ.
+    """
+    connect_args = {}
+    if not raw_url:
+        return "sqlite+aiosqlite:///./recruiting.db", connect_args
 
+    url = str(raw_url).strip().strip("'\"").strip()
+
+    # Bóc tách query parameter gây xung đột với asyncpg & kích hoạt SSL cho Cloud DB
+    if "?" in url:
+        base_part, query_part = url.split("?", 1)
+        if any(token in query_part for token in ["sslmode", "ssl=true", "channel_binding"]) or "neon.tech" in base_part:
+            connect_args["ssl"] = True
+        url = base_part
+    elif any(host in url for host in ["neon.tech", "amazonaws.com", "supabase.co"]):
+        connect_args["ssl"] = True
+
+    # Chuẩn hóa tiền tố giao thức sang postgresql+asyncpg
+    if "://" in url:
+        scheme, rest = url.split("://", 1)
+        scheme_clean = scheme.strip().lower()
+        if scheme_clean.startswith("sqlite"):
+            url = f"sqlite+aiosqlite://{rest}"
+        else:
+            url = f"postgresql+asyncpg://{rest}"
+    else:
+        url = f"postgresql+asyncpg://{url}"
+
+    return url, connect_args
+
+
+# Async Engine setup
+raw_db_source = os.getenv("DATABASE_URL") or settings.DATABASE_URL
 if os.getenv("USE_SQLITE", "false").lower() == "true":
     DB_URL = "sqlite+aiosqlite:///./recruiting.db"
     SYNC_DB_URL = "sqlite:///./recruiting.db"
+    connect_args = {}
 else:
-    SYNC_DB_URL = getattr(settings, "SYNC_DATABASE_URL", None) or settings.DATABASE_URL
-    # Normalize PostgreSQL URL to asyncpg driver
-    if DB_URL.startswith("postgres://"):
-        DB_URL = DB_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-    elif DB_URL.startswith("postgresql://") and not DB_URL.startswith("postgresql+asyncpg://"):
-        DB_URL = DB_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-
-    # Clean query parameters for asyncpg & handle SSL
-    if "?" in DB_URL:
-        base_part, query_part = DB_URL.split("?", 1)
-        if "sslmode=require" in query_part or "ssl=true" in query_part or "neon.tech" in base_part:
-            connect_args["ssl"] = True
-        DB_URL = base_part
-    elif "neon.tech" in DB_URL or "amazonaws.com" in DB_URL or "supabase.co" in DB_URL:
-        connect_args["ssl"] = True
+    DB_URL, connect_args = normalize_db_url(raw_db_source)
+    SYNC_DB_URL = getattr(settings, "SYNC_DATABASE_URL", None) or DB_URL.replace("+asyncpg", "")
 
 async_engine = create_async_engine(
     DB_URL,

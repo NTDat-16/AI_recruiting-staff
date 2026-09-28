@@ -1065,4 +1065,37 @@ Failed to load resource: the server responded with a status of 404 ()
    - Lệnh `npm run build` chạy thành công 100% trong 1.8 giây.
 
 ---
+
+## 26. BÁO CÁO KHẮC PHỤC LỖI DRIVER ASYNC (The loaded 'psycopg2' is not async) TRÊN VERCEL PRODUCTION
+*(Tối ưu hóa bộ chuẩn hóa URL kết nối Neon PostgreSQL, ép buộc driver postgresql+asyncpg và kích hoạt bảo mật SSL)*
+
+### 26.1. Triệu chứng & Log ghi nhận từ Vercel Health Check:
+Khi hệ thống giám sát chẩn đoán nạp router tại `/api/health`, ghi nhận ngoại lệ:
+```text
+The asyncio extension requires an async driver to be used. The loaded 'psycopg2' is not async.
+Traceback (most recent call last):
+  File "/var/task/api/index.py", line 100, in <module>
+    from app.modules.auth.router import router as auth_router
+  ...
+  File "/var/task/api/app/core/database.py", line 39, in <module>
+    async_engine = create_async_engine(DB_URL, ...)
+sqlalchemy.exc.InvalidRequestError: The asyncio extension requires an async driver to be used. The loaded 'psycopg2' is not async.
+```
+
+### 26.2. Phân tích Nguyên nhân:
+1. URL kết nối cơ sở dữ liệu `DATABASE_URL` khi được cấu hình trên Vercel hoặc truyền từ file môi trường có thể chứa dấu nháy kép `"` hoặc bắt đầu bằng `postgresql://` thay vì `postgresql+asyncpg://`.
+2. Hàm chuẩn hóa cũ chỉ dựa vào `startswith("postgresql://")` đơn giản, nếu chuỗi có dấu nháy `"` hoặc khoảng trắng thì điều kiện `startswith` trả về `False`. Khi đó, chuỗi không được thay thế bằng `postgresql+asyncpg://`, khiến SQLAlchemy mặc định tải driver đồng bộ `psycopg2` và ném lỗi `InvalidRequestError`.
+
+### 26.3. Giải pháp triệt để (`api/app/core/database.py`):
+1. **Viết hàm `normalize_db_url` chuyên biệt:**
+   - Cắt bỏ triệt để khoảng trắng và dấu nháy `'`, `"`.
+   - Bóc tách toàn bộ query string (`sslmode`, `channel_binding`) để tránh xung đột với driver `asyncpg`, tự động chuyển sang `connect_args={"ssl": True}` cho máy chủ Cloud (Neon/AWS/Supabase).
+   - Tách scheme theo `://` và ép buộc chuyển mọi biến thể (`postgres`, `postgresql`, `postgresql+psycopg2`) thành `postgresql+asyncpg`.
+   - Đọc trực tiếp từ `os.getenv("DATABASE_URL") or settings.DATABASE_URL`.
+2. **Kiểm thử xác minh:**
+   - Thử nghiệm với chuỗi có nháy kép, có query param Neon: Đầu ra chuẩn hóa chính xác thành `postgresql+asyncpg://...` với `ssl: True`.
+   - Engine `create_async_engine` khởi tạo thành công với dialect `postgresql` và driver `asyncpg`.
+   - Toàn bộ 6 Domain Routers nạp sạch lỗi: `router_errors: {}`.
+
+---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*
