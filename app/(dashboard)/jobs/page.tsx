@@ -128,9 +128,9 @@ export default function JobsDashboardPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Quản Lý Tin Tuyển Dụng (JD)</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Quản Lý Tin Tuyển Dụng</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Thiết lập tiêu chí đánh giá AI riêng biệt cho từng vị trí
+            Thiết lập và quản lý các vị trí tuyển dụng cùng tiêu chí đánh giá ứng viên
           </p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>+ Tạo Tin Tuyển Dụng Mới</Button>
@@ -197,7 +197,7 @@ export default function JobsDashboardPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Tạo Tin Tuyển Dụng & Cấu Hình AI"
+        title="Tạo Tin Tuyển Dụng Mới"
         maxWidth="lg"
       >
         <form onSubmit={handleCreateJob} className="space-y-4">
@@ -206,7 +206,7 @@ export default function JobsDashboardPage() {
             <input
               type="text"
               required
-              placeholder="VD: Senior Backend Python/FastAPI Developer"
+              placeholder="VD: Senior Backend Developer"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full text-sm border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
@@ -258,10 +258,10 @@ export default function JobsDashboardPage() {
             />
           </div>
 
-          {/* AI Criteria Weights Configuration */}
-          <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 space-y-3">
-            <h4 className="text-xs font-bold text-indigo-900 uppercase">
-              ⚙️ Trọng số chấm điểm AI (Tổng = 100%)
+          {/* Criteria Weights Configuration */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-slate-800 uppercase">
+              ⚙️ Tiêu chí và trọng số đánh giá
             </h4>
             <div className="grid grid-cols-3 gap-3 text-xs">
               <div>

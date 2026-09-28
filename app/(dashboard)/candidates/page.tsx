@@ -124,12 +124,12 @@ export default function CandidatesPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Pipeline Quản Lý Ứng Viên</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Theo dõi tiến trình từ nộp CV, chấm điểm AI, phỏng vấn đến gửi offer
+            Theo dõi tiến trình từ tiếp nhận hồ sơ, sàng lọc, phỏng vấn đến tuyển dụng
           </p>
         </div>
         <div className="flex space-x-2">
           <Button size="sm" onClick={() => setIsUploadModalOpen(true)}>
-            + HR Tải Lên CV Mới
+            + Tải Lên Hồ Sơ Mới
           </Button>
         </div>
       </div>
@@ -178,7 +178,7 @@ export default function CandidatesPage() {
       >
         <form onSubmit={handleUploadCV} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Vị trí tuyển dụng (Từ CSDL) *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Vị trí tuyển dụng *</label>
             <select
               value={jobId}
               onChange={(e) => setJobId(e.target.value)}

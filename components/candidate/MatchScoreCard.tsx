@@ -58,8 +58,8 @@ export const MatchScoreCard: React.FC<MatchScoreCardProps> = ({
   return (
     <Card className="border-indigo-100 bg-gradient-to-b from-indigo-50/20 to-white">
       <CardHeader
-        title="AI Đánh Giá & Chấm Điểm Phù Hợp"
-        subtitle="So khớp ngữ nghĩa tự động giữa CV ứng viên và bản mô tả công việc (JD)"
+        title="Đánh Giá & Chấm Điểm Phù Hợp"
+        subtitle="Mức độ tương thích giữa hồ sơ ứng viên và yêu cầu công việc"
         action={
           <div className="flex items-center space-x-2">
             <span className="text-xs font-semibold uppercase text-slate-500">Điểm phù hợp:</span>
@@ -110,7 +110,7 @@ export const MatchScoreCard: React.FC<MatchScoreCardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="border border-emerald-200/80 bg-emerald-50/30 rounded-lg p-3.5">
           <h5 className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">
-            Điểm mạnh nổi bật (Strengths)
+            Điểm mạnh nổi bật
           </h5>
           <ul className="text-xs text-emerald-900 space-y-1 list-disc list-inside">
             {scoreBreakdown.strengths?.map((s, i) => (
@@ -120,7 +120,7 @@ export const MatchScoreCard: React.FC<MatchScoreCardProps> = ({
         </div>
         <div className="border border-amber-200/80 bg-amber-50/30 rounded-lg p-3.5">
           <h5 className="text-xs font-bold uppercase tracking-wider text-amber-800 mb-2">
-            Điểm còn thiếu sót (Gaps)
+            Điểm cần cải thiện
           </h5>
           <ul className="text-xs text-amber-900 space-y-1 list-disc list-inside">
             {scoreBreakdown.gaps?.map((g, i) => (
@@ -134,8 +134,8 @@ export const MatchScoreCard: React.FC<MatchScoreCardProps> = ({
       <div className="border-t border-slate-100 pt-4 bg-slate-50/50 -mx-6 -mb-6 p-6 rounded-b-xl">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h5 className="text-xs font-bold text-slate-700">Đánh giá độ chính xác của AI (Human-in-the-loop)</h5>
-            <p className="text-xs text-slate-500">Giúp hệ thống học hỏi và tinh chỉnh thuật toán chấm điểm sau này</p>
+            <h5 className="text-xs font-bold text-slate-700">Đánh giá độ chuẩn xác</h5>
+            <p className="text-xs text-slate-500">Phản hồi từ chuyên viên tuyển dụng để nâng cao chất lượng đánh giá</p>
           </div>
           <div className="flex items-center space-x-1">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -151,10 +151,10 @@ export const MatchScoreCard: React.FC<MatchScoreCardProps> = ({
             ))}
             {!submitted && rating > 0 && (
               <Button size="sm" variant="outline" className="ml-2 text-xs" onClick={handleFeedback} disabled={submitting}>
-                {submitting ? "Đang lưu..." : "Gửi feedback"}
+                {submitting ? "Đang lưu..." : "Gửi đánh giá"}
               </Button>
             )}
-            {submitted && <Badge variant="success" className="ml-2">Đã lưu feedback</Badge>}
+            {submitted && <Badge variant="success" className="ml-2">Đã ghi nhận</Badge>}
           </div>
         </div>
       </div>

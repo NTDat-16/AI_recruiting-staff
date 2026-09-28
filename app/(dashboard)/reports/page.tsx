@@ -50,25 +50,25 @@ export default function ReportsDashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Báo Cáo & Phân Tích Tuyển Dụng</h1>
         <p className="text-xs text-slate-500 mt-1">
-          Dữ liệu thống kê trực tiếp từ cơ sở dữ liệu PostgreSQL về tỷ lệ chuyển đổi phễu tuyển dụng
+          Thống kê hiệu quả tuyển dụng và tỷ lệ chuyển đổi qua các giai đoạn tuyển chọn
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase">Tổng số ứng viên trong CSDL</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase">Tổng số ứng viên</p>
           <p className="text-2xl font-extrabold text-slate-900 mt-1">{statsData ? `${statsData.total_candidates} ứng viên` : "..."}</p>
-          <p className="text-xs text-emerald-600 mt-1">Đã lưu trữ và trích xuất vector embedding</p>
+          <p className="text-xs text-emerald-600 mt-1">Đã tiếp nhận hồ sơ</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase">Lịch phỏng vấn đã tạo</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase">Lịch phỏng vấn</p>
           <p className="text-2xl font-extrabold text-slate-900 mt-1">{statsData ? `${statsData.total_interviews} buổi` : "..."}</p>
-          <p className="text-xs text-slate-500 mt-1">Tự động tạo phòng họp Google Meet</p>
+          <p className="text-xs text-slate-500 mt-1">Đã lên lịch thực hiện</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase">Điểm phù hợp TB (AI Match)</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase">Độ phù hợp trung bình</p>
           <p className="text-2xl font-extrabold text-slate-900 mt-1">{statsData ? `${statsData.average_match_score}%` : "..."}</p>
-          <p className="text-xs text-indigo-600 mt-1">Đánh giá khách quan bởi Gemini AI</p>
+          <p className="text-xs text-indigo-600 mt-1">Chỉ số tương thích công việc</p>
         </Card>
       </div>
 
@@ -77,7 +77,7 @@ export default function ReportsDashboardPage() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader
-              title="Phễu Tuyển Dụng (Recruitment Funnel Analytics)"
+              title="Phễu Tuyển Dụng"
               subtitle="Tỷ lệ chuyển đổi qua từng giai đoạn tuyển dụng"
             />
             <div className="space-y-4 py-2">

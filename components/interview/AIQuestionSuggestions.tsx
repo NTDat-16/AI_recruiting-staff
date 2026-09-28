@@ -31,8 +31,8 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
   return (
     <Card className="border-indigo-100 shadow-sm">
       <CardHeader
-        title="Gợi Ý Câu Hỏi Phỏng Vấn (AI Assisted - Chỉ Tham Khảo)"
-        subtitle="Bộ câu hỏi tình huống được AI cá nhân hóa theo JD và hồ sơ năng lực của ứng viên. Dành riêng cho Interviewer tham khảo trong quá trình phỏng vấn."
+        title="Gợi Ý Câu Hỏi Phỏng Vấn"
+        subtitle="Bộ câu hỏi tình huống chuyên môn theo vị trí và hồ sơ năng lực của ứng viên"
         action={
           onRefresh && (
             <Button size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
@@ -43,16 +43,9 @@ export const AIQuestionSuggestions: React.FC<AIQuestionSuggestionsProps> = ({
       />
 
       <div className="space-y-4">
-        <div className="bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-900 flex items-center gap-2">
-          <span className="text-base">💡</span>
-          <span>
-            <strong>Lưu ý:</strong> Các câu hỏi dưới đây chỉ mang tính chất gợi ý và tham khảo chuyên môn, không yêu cầu tích chọn hay thao tác lưu trữ.
-          </span>
-        </div>
-
         {questions.length === 0 ? (
           <div className="text-center py-8 text-sm text-slate-500">
-            Chưa có câu hỏi gợi ý. Nhấn làm mới để AI phân tích và đề xuất.
+            Chưa có câu hỏi gợi ý. Nhấn làm mới để tạo bộ câu hỏi phù hợp.
           </div>
         ) : (
           questions.map((q, idx) => (

@@ -111,9 +111,9 @@ export default function EvaluationsDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Đánh Giá Sau Phỏng Vấn & Phân Tích Ghi Âm</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Đánh Giá Sau Phỏng Vấn</h1>
         <p className="text-xs text-slate-500 mt-1">
-          Chuyển đổi âm thanh sang văn bản (STT), phân tách người nói và tổng hợp báo cáo đánh giá hợp nhất
+          Phân tích nội dung phỏng vấn, nhận diện phản hồi và tổng hợp báo cáo đánh giá
         </p>
       </div>
 
@@ -127,7 +127,7 @@ export default function EvaluationsDashboardPage() {
             />
             <form onSubmit={handleAudioUpload} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Chọn Buổi Phỏng Vấn (Từ CSDL)</label>
+                <label className="block font-semibold text-slate-700 mb-1">Chọn Buổi Phỏng Vấn</label>
                 <select
                   value={selectedInterviewId}
                   onChange={(e) => setSelectedInterviewId(e.target.value)}

@@ -1128,4 +1128,47 @@ sqlalchemy.exc.InvalidRequestError: The asyncio extension requires an async driv
   - `ui_enabled = true`: Cung cấp giao diện 3D Graph Visualization tại cổng `http://localhost:9749`.
 
 ---
+
+## 28. TINH GỌN TOÀN DIỆN GIAO DIỆN & TÁCH BIỆT CỔNG ỨNG VIÊN VỚI NHÀ TUYỂN DỤNG
+*(Loại bỏ toàn bộ các ghi chú kỹ thuật, nhãn stack nội bộ trên giao diện; Tách độc lập Cổng Ứng Viên chuyên biệt và Bảng Điều Khiển Nhà Tuyển Dụng)*
+
+### 28.1. Tách Cổng Ứng Viên (Candidate Portal) Độc Lập Hoàn Toàn:
+- **Tạo Component Header Thông Minh (`components/layout/AppHeader.tsx`):**
+  - **Chế độ Cổng Ứng Viên** (`/careers`, `/jobs/public`, `/jobs/[slug]`, `/apply/[jobId]`):
+    - Header hiển thị tối giản: Logo `💼 Cổng Tuyển Dụng`, liên kết `Cơ Hội Việc Làm`.
+    - Nút hành động chuyển hướng: `Dành Cho Nhà Tuyển Dụng →`.
+    - **Hoàn toàn ẩn toàn bộ thanh menu quản trị HR** (Dashboard, Tin Tuyển Dụng, Ứng Viên & Pipeline, Lịch Phỏng Vấn, Đánh Giá, Báo Cáo) để bảo mật và giữ giao diện trong sáng, chuyên nghiệp cho ứng viên.
+  - **Chế độ Nhà Tuyển Dụng / HR Quản Trị** (`/`, `/jobs`, `/candidates`, `/interviews`, `/evaluations`, `/reports`):
+    - Đầy đủ 6 phân hệ quản lý tuyển dụng.
+    - Nút truy cập nhanh `🌐 Cổng Ứng Viên ↗` và avatar định danh HR.
+  - Tạo trang truy cập chính thức `/careers` (`app/careers/page.tsx`) làm cổng nghề nghiệp doanh nghiệp độc lập.
+
+### 28.2. Rà Soát & Tinh Gọn Toàn Bộ Các Nhãn Kỹ Thuật (Tech Clutter Removal):
+- **Trang Bảng Điều Khiển (`app/page.tsx`):**
+  - Xóa bỏ các nhãn dev/hạ tầng: `Lưu trữ PostgreSQL` -> `Đã tiếp nhận`, `Đã lên lịch Google Meet` -> `Sắp diễn ra`, `Tính toán bởi Gemini AI` -> `Chỉ số tương thích`, `(Từ PostgreSQL)` -> loại bỏ hoàn toàn.
+  - Thay thế khối card kỹ thuật nội bộ ("Trạng Thái Hệ Thống AI & Worker", "Whisper API", "Celery Worker", "Redis Queue") bằng widget kinh doanh tuyển dụng thực tế: **"Tiến Độ Phễu Tuyển Dụng"** (Hồ sơ mới, Đang sàng lọc, Vòng phỏng vấn, Đề xuất Offer, Đã tiếp nhận) và liên kết phân tích chi tiết.
+- **Trang Quản Lý Tin Tuyển Dụng (`app/(dashboard)/jobs/page.tsx`):**
+  - Loại bỏ ký hiệu chuyên ngành gây rối: `Quản Lý Tin Tuyển Dụng (JD)` -> `Quản Lý Tin Tuyển Dụng`.
+  - Tiêu đề modal: `Tạo Tin Tuyển Dụng & Cấu Hình AI` -> `Tạo Tin Tuyển Dụng Mới`.
+  - Mục trọng số: `⚙️ Trọng số chấm điểm AI (Tổng = 100%)` -> `⚙️ Tiêu chí và trọng số đánh giá`.
+- **Trang Pipeline Ứng Viên (`app/(dashboard)/candidates/page.tsx`):**
+  - Tinh gọn phụ đề, bỏ nhãn kỹ thuật `(Từ CSDL)` trong modal chọn vị trí tuyển dụng.
+- **Trang Chi Tiết Ứng Viên (`app/(dashboard)/candidates/[id]/page.tsx` & `components/candidate/MatchScoreCard.tsx`):**
+  - Bỏ nhãn badge `✓ Đã trích xuất Avatar từ CV`.
+  - Thay đổi `Dữ Liệu Trích Xuất Tự Động Từ CV (Parsed Data)` -> `Thông Tin Hồ Sơ Ứng Viên`.
+  - Bỏ thuật ngữ kỹ thuật `(Human-in-the-loop)`, đổi thành `Đánh giá độ chuẩn xác` và `Phản hồi từ chuyên viên tuyển dụng`.
+- **Trang Lịch Phỏng Vấn (`app/(dashboard)/interviews/page.tsx` & `components/interview/AIQuestionSuggestions.tsx`):**
+  - Bỏ nhãn `(Thực tế)` trong cột bảng họp và phụ đề.
+  - Xóa bỏ hộp thông báo nhắc nhở nội bộ `💡 Lưu ý: Các câu hỏi dưới đây chỉ mang tính chất gợi ý...`.
+  - Đơn giản hóa tiêu đề: `Gợi Ý Câu Hỏi Phỏng Vấn`.
+- **Trang Đánh Giá & Báo Cáo Tuyển Dụng (`app/(dashboard)/evaluations/page.tsx` & `app/(dashboard)/reports/page.tsx`):**
+  - Xóa bỏ `(Từ CSDL)`, loại bỏ các ghi chú kỹ thuật `PostgreSQL`, `Gemini AI`, `Google Meet`.
+- **Chân Trang Layout Toàn Cục (`app/layout.tsx`):**
+  - Loại bỏ chuỗi debug `(FastAPI + Next.js + Celery)`, cập nhật bản quyền thương mại chuyên nghiệp: `© 2026 AI Recruiting Platform • Hệ Thống Quản Trị Tuyển Dụng Thông Minh`.
+
+### 28.3. Kết Quả Kiểm Thử & Biên Dịch Sản Phẩm:
+- Kiểm tra toàn bộ 12 tuyến đường dẫn (Routes): 100% biên dịch thành công (`npm run build` exit code 0).
+- Không còn bất kỳ câu chú thích, nhãn stack công nghệ hoặc ghi chú nội bộ của nhà phát triển nào xuất hiện trên giao diện người dùng.
+
+---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*

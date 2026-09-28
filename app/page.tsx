@@ -42,29 +42,30 @@ export default function DashboardPage() {
       color: "text-blue-600",
     },
     {
-      label: "CV trong hệ thống",
+      label: "Tổng số hồ sơ",
       value: statsData ? String(statsData.total_candidates) : "...",
-      change: "Lưu trữ PostgreSQL",
+      change: "Đã tiếp nhận",
       icon: "📄",
       color: "text-indigo-600",
     },
     {
       label: "Lịch phỏng vấn",
       value: statsData ? String(statsData.total_interviews) : "...",
-      change: "Đã lên lịch Google Meet",
+      change: "Sắp diễn ra",
       icon: "🗓️",
       color: "text-amber-600",
     },
     {
-      label: "Điểm phù hợp TB (AI Match)",
+      label: "Độ phù hợp trung bình",
       value: statsData ? `${statsData.average_match_score}%` : "...",
-      change: "Tính toán bởi Gemini AI",
+      change: "Chỉ số tương thích",
       icon: "🎯",
       color: "text-emerald-600",
     },
   ];
 
   const recentCandidates: any[] = statsData?.recent_candidates || [];
+  const funnel = statsData?.pipeline_funnel || {};
 
   return (
     <div className="space-y-8">
@@ -73,7 +74,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Bảng Điều Khiển Tuyển Dụng</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Tổng quan quy trình tuyển dụng ứng dụng trí tuệ nhân tạo (AI-Assisted Recruiting)
+            Tổng quan hiệu quả tiếp nhận hồ sơ, tiến độ tuyển chọn và lịch phỏng vấn
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -110,12 +111,12 @@ export default function DashboardPage() {
 
       {/* Main Content Split */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Applications with AI Scores */}
+        {/* Recent Applications with Scores */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader
-              title="Ứng Viên Mới Chấm Điểm Bằng AI (Từ PostgreSQL)"
-              subtitle="Tự động phân tích CV, so khớp yêu cầu JD và xếp hạng theo % độ phù hợp"
+              title="Ứng Viên Mới Ứng Tuyển"
+              subtitle="Danh sách ứng viên nộp hồ sơ gần đây và mức độ phù hợp công việc"
               action={
                 <Link href="/candidates" className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">
                   Xem tất cả pipeline →
@@ -125,7 +126,7 @@ export default function DashboardPage() {
 
             <div className="divide-y divide-slate-100">
               {loading ? (
-                <div className="text-center py-6 text-xs text-slate-400">Đang tải dữ liệu từ CSDL...</div>
+                <div className="text-center py-6 text-xs text-slate-400">Đang tải danh sách ứng viên...</div>
               ) : recentCandidates.length === 0 ? (
                 <div className="text-center py-6 text-xs text-slate-400">Chưa có ứng viên nào trong hệ thống.</div>
               ) : (
@@ -147,7 +148,7 @@ export default function DashboardPage() {
 
                     <div className="flex items-center space-x-3">
                       <Badge variant={c.score >= 80 ? "success" : "warning"} className="font-mono font-bold">
-                        {c.score}% Match
+                        {c.score}% Phù hợp
                       </Badge>
                       <span className="text-xs text-slate-600 hidden sm:inline-block">{c.status}</span>
                       <span className="text-xs text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -161,36 +162,53 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* AI & Worker Status Side Panel */}
+        {/* Recruitment Pipeline Summary Side Panel */}
         <div className="space-y-6">
-          <Card className="border-indigo-100 bg-indigo-50/20">
+          <Card className="border-slate-200">
             <CardHeader
-              title="Trạng Thái Hệ Thống AI & Worker"
-              subtitle="Kiến trúc tách lớp theo tài liệu thiết kế"
+              title="Tiến Độ Phễu Tuyển Dụng"
+              subtitle="Phân bổ số lượng ứng viên theo giai đoạn"
             />
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center py-2 border-b border-indigo-100/60">
-                <span className="text-slate-600">LLM Provider (Trừu tượng hóa)</span>
-                <span className="font-semibold text-indigo-700">Anthropic Claude / OpenAI / Mock</span>
+            <div className="space-y-3.5 text-xs">
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span className="text-slate-600 font-medium">Hồ sơ mới nộp</span>
+                <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {funnel.new || 0}
+                </span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-indigo-100/60">
-                <span className="text-slate-600">Speech-to-Text Diarization</span>
-                <span className="font-semibold text-emerald-700">Whisper API / AssemblyAI</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span className="text-slate-600 font-medium">Đang sàng lọc</span>
+                <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">
+                  {funnel.reviewing || 0}
+                </span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-indigo-100/60">
-                <span className="text-slate-600">Celery Worker Xử Lý Nền</span>
-                <span className="font-semibold text-emerald-700">Active (Redis Queue)</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span className="text-slate-600 font-medium">Vòng phỏng vấn</span>
+                <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                  {(funnel.interview_invited || 0) + (funnel.interviewed || 0)}
+                </span>
               </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-slate-600">Human-in-the-loop Guardrail</span>
-                <span className="font-semibold text-indigo-700">Bật (Con người duyệt cuối)</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span className="text-slate-600 font-medium">Đề xuất tuyển dụng (Offer)</span>
+                <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  {funnel.offered || 0}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1.5">
+                <span className="text-slate-600 font-medium">Đã tiếp nhận (Hired)</span>
+                <span className="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">
+                  {funnel.hired || 0}
+                </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-indigo-100">
-              <p className="text-[11px] text-slate-500 italic">
-                * Mọi kết quả chấm điểm CV và phân tích transcript chỉ mang tính chất đề xuất hỗ trợ HR, không tự động loại ứng viên.
-              </p>
+            <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
+              <Link
+                href="/reports"
+                className="w-full block text-center py-2 px-3 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Xem báo cáo phân tích chi tiết →
+              </Link>
             </div>
           </Card>
         </div>

@@ -58,7 +58,7 @@ export default function ApplyJobPage({ params }: { params: Promise<{ jobId: stri
       <Card>
         <CardHeader
           title="Ứng Tuyển Cơ Hội Nghề Nghiệp"
-          subtitle="Tải lên CV của bạn định dạng PDF hoặc DOCX để hệ thống AI phân tích và phản hồi"
+          subtitle="Vui lòng hoàn tất thông tin và đính kèm CV định dạng PDF hoặc DOCX"
         />
 
         {success ? (
@@ -66,7 +66,7 @@ export default function ApplyJobPage({ params }: { params: Promise<{ jobId: stri
             <div className="text-5xl">🎉</div>
             <h2 className="text-xl font-bold text-slate-900">Nộp Hồ Sơ Thành Công!</h2>
             <p className="text-sm text-slate-600 max-w-md mx-auto">
-              Cảm ơn bạn đã ứng tuyển. Hệ thống đã tiếp nhận CV và bắt đầu quá trình sàng lọc tự động. Bộ phận tuyển dụng sẽ sớm liên hệ qua email <strong>{email}</strong>.
+              Cảm ơn bạn đã nộp hồ sơ ứng tuyển. Bộ phận tuyển dụng đã tiếp nhận CV và sẽ liên hệ sớm nhất qua email <strong>{email}</strong>.
             </p>
             <div className="pt-4">
               <Link href="/jobs/public">

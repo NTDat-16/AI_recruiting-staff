@@ -101,11 +101,6 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
               <span>📧 {candidate.email}</span>
               {candidate.phone && <span>📞 {candidate.phone}</span>}
               <span>🕒 Đăng ký: {formatDate(candidate.created_at)}</span>
-              {candidate.avatar_url && (
-                <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-medium border border-emerald-200">
-                  ✓ Đã trích xuất Avatar từ CV
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -170,11 +165,11 @@ export default function CandidateDetailPage({ params }: { params: Promise<{ id: 
             />
           )}
 
-          {/* Parsed Resume Details */}
+          {/* Resume Details */}
           <Card>
             <CardHeader
-              title="Dữ Liệu Trích Xuất Tự Động Từ CV (Parsed Data)"
-              subtitle="Trích xuất cấu trúc hóa thông tin học vấn, kinh nghiệm và kỹ năng bằng AI"
+              title="Thông Tin Hồ Sơ Ứng Viên"
+              subtitle="Thông tin chuyên môn, quá trình làm việc và kỹ năng được trích xuất từ CV"
             />
             <div className="space-y-4 text-xs">
               {candidate.parsed_data?.skills && (

@@ -211,9 +211,9 @@ export default function InterviewsDashboardPage() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Quản Lý Lịch Phỏng Vấn Thông Minh</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Quản Lý Lịch Phỏng Vấn</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Phòng họp video trực tuyến thực tế (Jitsi Meet), phát hành email tự động & quản lý trạng thái ứng viên
+            Lên lịch, tổ chức phỏng vấn trực tuyến và theo dõi trạng thái phản hồi của ứng viên
           </p>
         </div>
         <Button onClick={() => setIsScheduleModalOpen(true)}>+ Đặt Lịch Phỏng Vấn</Button>
@@ -221,8 +221,8 @@ export default function InterviewsDashboardPage() {
 
       <Card>
         <CardHeader
-          title="Danh Sách Buổi Phỏng Vấn Tuyển Dụng"
-          subtitle={`Tổng số: ${interviews.length} buổi phỏng vấn đã được ghi nhận`}
+          title="Danh Sách Buổi Phỏng Vấn"
+          subtitle={`Tổng số: ${interviews.length} buổi phỏng vấn`}
         />
 
         <Table>
@@ -230,7 +230,7 @@ export default function InterviewsDashboardPage() {
             <Tr>
               <Th>Ứng viên & Vị trí</Th>
               <Th>Thời gian</Th>
-              <Th>Phòng họp trực tuyến (Thực tế)</Th>
+              <Th>Phòng họp trực tuyến</Th>
               <Th>Trạng thái</Th>
               <Th className="text-right">Tác vụ</Th>
             </Tr>
