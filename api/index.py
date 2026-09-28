@@ -50,6 +50,7 @@ def root_index():
     }
 
 
+@app.get("/health")
 @app.get("/api/health")
 def health_check():
     """Health check endpoint specified in Vercel Serverless standard."""
@@ -62,6 +63,7 @@ def health_check():
 
 
 @app.post("/api/chat")
+@app.post("/chat")
 async def chat_handler(payload: PromptRequest):
     """Test AI chat endpoint from Vercel deployment guide."""
     if not payload.message:
@@ -80,22 +82,46 @@ async def chat_handler(payload: PromptRequest):
         return {"reply": f"Xử lý thành công câu hỏi: {payload.message} (Chế độ phản hồi nhanh)"}
 
 
-# Mount full recruiting platform domain routers if available
-try:
-    from app.core.config import settings
-    from app.modules.auth.router import router as auth_router
-    from app.modules.job_posting.router import router as job_router
-    from app.modules.candidate.router import router as candidate_router
-    from app.modules.interview.router import router as interview_router
-    from app.modules.evaluation.router import router as evaluation_router
-    from app.modules.email.router import router as email_router
+# Mount full recruiting platform domain routers with both /api/v1 and /v1 prefixes
+domain_routers = []
 
-    app.include_router(auth_router, prefix="/api/v1")
-    app.include_router(job_router, prefix="/api/v1")
-    app.include_router(candidate_router, prefix="/api/v1")
-    app.include_router(interview_router, prefix="/api/v1")
-    app.include_router(evaluation_router, prefix="/api/v1")
-    app.include_router(email_router, prefix="/api/v1")
+try:
+    from app.modules.auth.router import router as auth_router
+    domain_routers.append(("auth", auth_router))
 except Exception as err:
-    # In lightweight serverless sandbox without DB credentials, core endpoints still work
-    pass
+    print(f"Warning: Could not load auth router: {err}")
+
+try:
+    from app.modules.job_posting.router import router as job_router
+    domain_routers.append(("job_posting", job_router))
+except Exception as err:
+    print(f"Warning: Could not load job_posting router: {err}")
+
+try:
+    from app.modules.candidate.router import router as candidate_router
+    domain_routers.append(("candidate", candidate_router))
+except Exception as err:
+    print(f"Warning: Could not load candidate router: {err}")
+
+try:
+    from app.modules.interview.router import router as interview_router
+    domain_routers.append(("interview", interview_router))
+except Exception as err:
+    print(f"Warning: Could not load interview router: {err}")
+
+try:
+    from app.modules.evaluation.router import router as evaluation_router
+    domain_routers.append(("evaluation", evaluation_router))
+except Exception as err:
+    print(f"Warning: Could not load evaluation router: {err}")
+
+try:
+    from app.modules.email.router import router as email_router
+    domain_routers.append(("email", email_router))
+except Exception as err:
+    print(f"Warning: Could not load email router: {err}")
+
+# Include routers under both /api/v1 and /v1 to guarantee matching across all Vercel rewrite patterns
+for router_name, r in domain_routers:
+    app.include_router(r, prefix="/api/v1")
+    app.include_router(r, prefix="/v1")

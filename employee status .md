@@ -961,4 +961,57 @@ requests.js:1  POST http://localhost:8000/api/v1/candidates/apply net::ERR_FAILE
     - `pipeline_funnel`: `{new: 1, reviewing: 1, interview_invited: 1, interviewed: 1, offered: 1, hired: 1, talent_pool: 1}`
 
 ---
+
+## 24. BÁO CÁO KHẮC PHỤC LỖI 404 (/api/v1/auth/login) VÀ HOÀN TẤT CẤU HÌNH VERCEL PRODUCTION
+*(Khắc phục xung đột điều hướng Next.js Rewrites vs Vercel Serverless, bổ sung Dual-Prefix Routing và thiết lập Checklist Biến môi trường)*
+
+### 24.1. Thực trạng & Triệu chứng lỗi ghi nhận trên Vercel:
+Khi truy cập ứng dụng trên Vercel, trình duyệt báo lỗi:
+```text
+Failed to load resource: the server responded with a status of 404 ()
+/api/v1/auth/login:1 Failed to load resource: the server responded with a status of 404 ()
+6200.js:1 Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'M_ID')
+    at Y (200.js:1:761)
+    at E (200.js:1:1442)
+```
+
+### 24.2. Phân tích Nguyên nhân gốc rễ (Root Cause Analysis):
+1. **Xung đột điều hướng Next.js (Routing Precedence):**
+   - Trong `next.config.mjs`, cấu hình cũ kiểm tra nếu `isVercel = true` thì trả về mảng rỗng `return []`.
+   - Trên nền tảng Vercel, Next.js có quyền ưu tiên xử lý URL cao hơn `vercel.json`. Khi nhận request `/api/v1/auth/login`, do không có rewrite rule trong Next.js và thư mục `app/` không có route tương ứng, Next.js lập tức trả về mã lỗi 404 trước khi request kịp chuyển tới Python Serverless Function (`api/index.py`).
+2. **Lỗi dây chuyền phía Frontend (`M_ID` TypeError):**
+   - Hàm đăng nhập tự động của client gửi request tới `/api/v1/auth/login`. Khi nhận về phản hồi 404 (dưới dạng HTML hoặc rỗng), mã nguồn JavaScript cố gắng đọc thuộc tính trong payload trả về dẫn đến lỗi `Cannot read properties of undefined (reading 'M_ID')`.
+3. **Prefix Routing trong FastAPI Serverless:**
+   - Các router ban đầu chỉ mount duy nhất ở prefix `/api/v1`. Tùy vào quy tắc rewrite của proxy Vercel, đường dẫn truyền vào FastAPI có thể là `/api/v1/auth/login` hoặc `/v1/auth/login`.
+4. **Thiếu Biến môi trường trên Vercel Project Settings:**
+   - Các file `.env` trên máy cá nhân được bảo vệ bởi `.gitignore` nên Vercel không tự động đọc được. Để backend FastAPI kết nối tới CSDL Neon và dịch vụ AI Gemini, cần phải khai báo đầy đủ các biến môi trường trên Vercel Dashboard.
+
+### 24.3. Các Giải pháp đã triển khai triệt để:
+1. **Chuẩn hóa Next.js Rewrites (`next.config.mjs`):**
+   - Cấu hình theo đúng chuẩn Vercel FastAPI template:
+     ```javascript
+     async rewrites() {
+       return [
+         {
+           source: "/api/:path*",
+           destination: isVercel
+             ? "/api/:path*"
+             : `${backendUrl}/api/:path*`,
+         },
+         {
+           source: "/storage/:path*",
+           destination: `${backendUrl}/storage/:path*`,
+         },
+       ];
+     }
+     ```
+   - Chuyển tiếp minh bạch toàn bộ các yêu cầu `/api/*` tới Vercel Serverless Function runtime.
+2. **Hỗ trợ Dual Prefix & Cô lập Router (`api/index.py`):**
+   - Đăng ký toàn bộ router nghiệp vụ (`auth`, `job_posting`, `candidate`, `interview`, `evaluation`, `email`) trên cả hai tiền tố `/api/v1` và `/v1`.
+   - Độc lập hóa khối nạp router: mỗi router được nạp trong một khối `try...except` riêng kèm log cảnh báo, ngăn ngừa việc 1 module lỗi làm dừng toàn bộ hệ thống.
+3. **Kiểm thử Biên dịch:**
+   - Chạy kiểm thử môi trường giả lập Vercel (`$env:VERCEL="1"; npm run build`) thành công 100% (11/11 pages).
+   - Kiểm tra API xác thực cục bộ kết nối Neon: Endpoint `POST /api/v1/auth/login` trả về `HTTP 200 OK` kèm JWT token hợp lệ.
+
+---
 *Báo cáo được khởi tạo và cập nhật bởi Trợ lý Lập trình Antigravity - Hệ thống Tuyển dụng AI 2026.*

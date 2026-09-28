@@ -10,14 +10,12 @@ const nextConfig = {
   output: isVercel ? undefined : "standalone",
   reactStrictMode: true,
   async rewrites() {
-    if (isVercel) {
-      // On Vercel Serverless, routing is handled natively by vercel.json -> api/index.py
-      return [];
-    }
     return [
       {
         source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`,
+        destination: isVercel
+          ? "/api/:path*"
+          : `${backendUrl}/api/:path*`,
       },
       {
         source: "/storage/:path*",
