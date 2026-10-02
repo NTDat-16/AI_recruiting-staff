@@ -72,14 +72,6 @@ export const AppHeader: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-3">
-            <a
-              href="/AI_RECRUITING_SRS_SPECIFICATION_v2.4.0.pdf"
-              target="_blank"
-              rel="noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              <span>📄 Bản Đặc Tả SRS (PDF)</span>
-            </a>
             <Link
               href="/"
               className="text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-xs"
@@ -209,16 +201,14 @@ export const AppHeader: React.FC = () => {
           )}
         </div>
 
-        {/* Trợ giúp / SRS PDF */}
-        <a
-          href="/AI_RECRUITING_SRS_SPECIFICATION_v2.4.0.pdf"
-          target="_blank"
-          rel="noreferrer"
+        {/* Trợ giúp */}
+        <button
           className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-          title="Tài liệu & Bản đặc tả SRS"
+          title="Trợ giúp & Hỗ trợ"
+          onClick={() => alert("Trung tâm Trợ giúp AI Recruiting Platform")}
         >
           <HelpCircle className="w-4 h-4" />
-        </a>
+        </button>
 
         {/* Profile Avatar */}
         <div className="flex items-center space-x-2 pl-1 border-l border-slate-200">
