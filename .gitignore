@@ -240,3 +240,12 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 .neon
+
+# =======================================================
+# Temporary & Backup Files
+# =======================================================
+*_backup.*
+*.backup
+*.bak
+*~
+*.tmp
