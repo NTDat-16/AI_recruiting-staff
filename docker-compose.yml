@@ -1,0 +1,132 @@
+services:
+  # 1. PostgreSQL Database with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: recruiting_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-recruiting_db}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d recruiting_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # 2. Redis Message Broker & Cache
+  redis:
+    image: redis:7-alpine
+    container_name: recruiting_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Backend FastAPI API Service
+  backend:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: recruiting_backend
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/recruiting_db
+      - SYNC_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/recruiting_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      - GEMINI_BASE_URL=${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai/}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - SECRET_KEY=${SECRET_KEY:-secret-key-ai-recruiting-2026}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_TLS=${SMTP_TLS:-true}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-recruitment@ai-recruiting.internal}
+      - DEFAULT_FROM_NAME=${DEFAULT_FROM_NAME:-Bộ Phận Tuyển Dụng}
+    volumes:
+      - ./api:/app
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # 4. Celery Background Worker (CV Scoring, Audio STT, Bulk Email)
+  celery-worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: recruiting_celery_worker
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app worker --loglevel=info -c 4
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/recruiting_db
+      - SYNC_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/recruiting_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.1-flash-lite}
+      - GEMINI_BASE_URL=${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai/}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_TLS=${SMTP_TLS:-true}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-recruitment@ai-recruiting.internal}
+      - DEFAULT_FROM_NAME=${DEFAULT_FROM_NAME:-Bộ Phận Tuyển Dụng}
+    volumes:
+      - ./api:/app
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # 5. Frontend Next.js Service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - BACKEND_INTERNAL_URL=http://backend:8000
+    container_name: recruiting_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=/api/v1
+      - BACKEND_INTERNAL_URL=http://backend:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
