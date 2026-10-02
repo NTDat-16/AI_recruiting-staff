@@ -75,7 +75,7 @@ const navItems: NavItem[] = [
   },
 ];
 
-export const VNRSidebar: React.FC = () => {
+export const AppSidebar: React.FC = () => {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -86,7 +86,7 @@ export const VNRSidebar: React.FC = () => {
       }`}
       style={{ minHeight: "calc(100vh - 3.5rem)" }}
     >
-      {/* Navigation List */}
+      {/* Danh sách mục điều hướng */}
       <div className="py-3 px-2 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -141,7 +141,7 @@ export const VNRSidebar: React.FC = () => {
         })}
       </div>
 
-      {/* Bottom Sidebar Footer with Collapse Toggle */}
+      {/* Chân sidebar với nút thu gọn / mở rộng */}
       <div className="p-2 border-t border-slate-100 flex items-center justify-between">
         <button
           onClick={() => setCollapsed(!collapsed)}

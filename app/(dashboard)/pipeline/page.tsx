@@ -237,7 +237,7 @@ export default function PipelinePage() {
       noteColor: "green",
       strongPoints: ["Kỹ năng phù hợp với JD vị trí ứng tuyển"],
       missingEvidence: ["Cần kiểm tra thêm vòng phỏng vấn kỹ thuật"],
-      aiReasoning: "Hồ sơ mới được tiếp nhận qua hệ thống VNR Talent Suite.",
+      aiReasoning: "Hồ sơ mới được tiếp nhận qua hệ thống AI ATS.",
     };
     setCandidates([newCand, ...candidates]);
     setIsAddModalOpen(false);

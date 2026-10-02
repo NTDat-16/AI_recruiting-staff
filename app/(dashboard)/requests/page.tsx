@@ -192,7 +192,7 @@ export default function RequestsPage() {
         {/* Action Buttons */}
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => alert("Tính năng nhập dữ liệu hàng loạt từ tệp Excel chuẩn VNR ATS")}
+            onClick={() => alert("Tính năng nhập dữ liệu hàng loạt từ tệp Excel chuẩn ATS")}
             className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
