@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CareerChatWidget } from "@/components/candidate/CareerChatWidget";
 
 export const AppHeader: React.FC = () => {
   const pathname = usePathname();
@@ -16,36 +17,62 @@ export const AppHeader: React.FC = () => {
 
   if (isCandidatePortal) {
     return (
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <Link href="/jobs/public" className="flex items-center space-x-2.5">
-              <span className="text-2xl">💼</span>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900">
-                Cổng Tuyển Dụng
-              </span>
-            </Link>
-            <nav className="hidden sm:flex space-x-1 text-sm font-medium text-slate-600">
-              <Link
-                href="/jobs/public"
-                className="px-3 py-2 rounded-lg hover:bg-slate-100 hover:text-slate-900 transition-colors"
-              >
-                Cơ Hội Việc Làm
+      <>
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <Link href="/careers" className="flex items-center space-x-2.5">
+                <span className="text-2xl">💼</span>
+                <span className="font-extrabold text-lg tracking-tight text-slate-900">
+                  Cổng Tuyển Dụng
+                </span>
               </Link>
-            </nav>
-          </div>
+              <nav className="hidden sm:flex space-x-1 text-sm font-medium text-slate-600">
+                <Link
+                  href="/careers"
+                  className={`px-3 py-2 rounded-lg transition-colors ${
+                    pathname === "/careers" || pathname === "/jobs/public"
+                      ? "bg-slate-100 text-slate-900 font-semibold"
+                      : "hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  Cơ Hội Việc Làm
+                </Link>
+                <Link
+                  href="/careers/track"
+                  className={`px-3 py-2 rounded-lg transition-colors ${
+                    pathname === "/careers/track"
+                      ? "bg-slate-100 text-slate-900 font-semibold"
+                      : "hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  🔍 Tra Cứu Hồ Sơ
+                </Link>
+              </nav>
+            </div>
 
-          <div className="flex items-center space-x-3">
-            <Link
-              href="/"
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1.5"
-            >
-              <span>Dành Cho Nhà Tuyển Dụng</span>
-              <span>→</span>
-            </Link>
+            <div className="flex items-center space-x-3">
+              <a
+                href="/AI_RECRUITING_SRS_SPECIFICATION_v2.4.0.pdf"
+                target="_blank"
+                rel="noreferrer"
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <span>📄 Bản Đặc Tả SRS (PDF)</span>
+              </a>
+              <Link
+                href="/"
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1.5"
+              >
+                <span>Dành Cho Nhà Tuyển Dụng</span>
+                <span>→</span>
+              </Link>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+        {/* Floating 24/7 AI Career Assistant for Candidates */}
+        <CareerChatWidget />
+      </>
     );
   }
 
@@ -83,7 +110,15 @@ export const AppHeader: React.FC = () => {
                 pathname.startsWith("/candidates") ? "bg-slate-100 text-slate-900 font-semibold" : "hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
-              Ứng Viên & Pipeline
+              Pipeline
+            </Link>
+            <Link
+              href="/talent-pool"
+              className={`px-3 py-2 rounded-lg transition-colors ${
+                pathname.startsWith("/talent-pool") ? "bg-slate-100 text-slate-900 font-semibold" : "hover:bg-slate-100 hover:text-slate-900"
+              }`}
+            >
+              Kho Nhân Tài
             </Link>
             <Link
               href="/interviews"
@@ -91,7 +126,7 @@ export const AppHeader: React.FC = () => {
                 pathname.startsWith("/interviews") ? "bg-slate-100 text-slate-900 font-semibold" : "hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
-              Lịch Phỏng Vấn
+              Phỏng Vấn
             </Link>
             <Link
               href="/evaluations"
@@ -113,8 +148,16 @@ export const AppHeader: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3">
+          <a
+            href="/AI_RECRUITING_SRS_SPECIFICATION_v2.4.0.pdf"
+            target="_blank"
+            rel="noreferrer"
+            className="hidden lg:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <span>📄 SRS (PDF)</span>
+          </a>
           <Link
-            href="/jobs/public"
+            href="/careers"
             target="_blank"
             className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 transition-colors flex items-center gap-1.5"
           >
@@ -129,3 +172,4 @@ export const AppHeader: React.FC = () => {
     </header>
   );
 };
+

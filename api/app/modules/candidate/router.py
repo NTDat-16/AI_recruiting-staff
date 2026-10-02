@@ -8,11 +8,34 @@ from app.modules.candidate.schemas import (
     PipelineStatusUpdate,
     HRFeedbackCreate,
     TalentPoolSearchQuery,
+    CandidateTrackItem,
+    CareerChatRequest,
+    CareerChatResponse,
+    RediscoverCandidateRequest,
 )
 from app.modules.candidate.service import CandidateService
 from app.shared.permissions import get_current_token_payload, get_optional_token_payload, RequireRoles, UserRole, TokenData
 
 router = APIRouter(prefix="/candidates", tags=["Candidates & CVs"])
+
+
+# --- Public Candidate Endpoints (No Auth Needed) ---
+@router.get("/track/status", response_model=List[CandidateTrackItem])
+async def track_application_status(
+    email: str = Query(..., description="Email ứng viên đã dùng nộp đơn"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tra cứu trạng thái hồ sơ ứng tuyển công khai mà không bắt buộc tạo tài khoản."""
+    return await CandidateService.track_applications(db, email=email)
+
+
+@router.post("/career-chat", response_model=CareerChatResponse)
+async def public_career_chat(
+    payload: CareerChatRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """AI Chatbot tư vấn việc làm và quy trình ứng tuyển 24/7."""
+    return await CandidateService.career_chat(db, message=payload.message, history=payload.history)
 
 
 # --- Public Application Endpoint ---
@@ -187,3 +210,23 @@ async def search_talent_pool(
 ):
     """Tìm kiếm ứng viên tiềm năng trong Talent Pool cho vị trí mới."""
     return await CandidateService.search_talent_pool(db, company_id=current_user.company_id, query=query)
+
+
+@router.post(
+    "/{candidate_id}/rediscover",
+    response_model=ApplicationResponse,
+    dependencies=[Depends(RequireRoles([UserRole.HR, UserRole.COMPANY_ADMIN]))],
+)
+async def rediscover_candidate(
+    candidate_id: str,
+    payload: RediscoverCandidateRequest,
+    current_user: TokenData = Depends(get_current_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """AI Talent Rediscovery: Tái kết nối ứng viên từ Talent Pool vào một Job mới."""
+    return await CandidateService.rediscover_candidate(
+        db=db,
+        candidate_id=candidate_id,
+        new_job_id=payload.job_id,
+        company_id=current_user.company_id,
+    )

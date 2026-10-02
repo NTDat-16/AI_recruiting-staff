@@ -73,4 +73,36 @@ class CandidateResponse(BaseModel):
 class TalentPoolSearchQuery(BaseModel):
     skills: List[str] = []
     keyword: Optional[str] = None
+    query: Optional[str] = None
     min_rating: Optional[float] = None
+
+
+class CareerChatRequest(BaseModel):
+    message: str
+    history: Optional[List[Dict[str, str]]] = None
+
+
+class CareerChatResponse(BaseModel):
+    reply: str
+    recommended_jobs: Optional[List[Dict[str, Any]]] = None
+
+
+class CandidateTrackItem(BaseModel):
+    application_id: str
+    candidate_name: str
+    candidate_email: str
+    job_id: str
+    job_title: str
+    department: Optional[str] = None
+    location: Optional[str] = None
+    status: str
+    status_label: str
+    step: int
+    progress: int
+    description: str
+    applied_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class RediscoverCandidateRequest(BaseModel):
+    job_id: str

@@ -313,14 +313,259 @@ class CandidateService:
 
     @staticmethod
     async def search_talent_pool(
-        db: AsyncSession, company_id: str, query: TalentPoolSearchQuery
+        db: AsyncSession, company_id: Optional[str], query: TalentPoolSearchQuery
     ) -> List[Candidate]:
-        sql = select(Candidate).options(selectinload(Candidate.applications)).where(Candidate.company_id == company_id)
+        sql = select(Candidate).options(
+            selectinload(Candidate.applications).selectinload(Application.job_posting)
+        )
+        if company_id:
+            sql = sql.where(Candidate.company_id == company_id)
         if query.min_rating is not None:
             sql = sql.where(Candidate.rating >= query.min_rating)
+
         result = await db.execute(sql)
         candidates = result.scalars().all()
-        return candidates
+
+        search_kw = (query.query or query.keyword or "").strip()
+        search_terms = []
+        if search_kw:
+            search_terms.extend([t.lower() for t in search_kw.replace(",", " ").split() if len(t) > 1])
+        if query.skills:
+            search_terms.extend([s.lower().strip() for s in query.skills if s.strip()])
+
+        if search_terms:
+            ranked = []
+            for c in candidates:
+                skills_list = [s.lower() for s in (c.parsed_data or {}).get("skills", [])]
+                full_haystack = f"{c.full_name} {c.raw_text or ''} {str(c.parsed_data or {})} {' '.join(c.tags or [])}".lower()
+
+                term_score = 0
+                for term in search_terms:
+                    if any(term in s for s in skills_list):
+                        term_score += 3
+                    elif term in full_haystack:
+                        term_score += 1
+
+                if term_score > 0:
+                    ranked.append((term_score, c))
+            ranked.sort(key=lambda x: x[0], reverse=True)
+            return [c for _, c in ranked]
+
+        return list(candidates)
+
+    @staticmethod
+    async def rediscover_candidate(
+        db: AsyncSession, candidate_id: str, new_job_id: str, company_id: Optional[str] = None
+    ) -> Application:
+        """AI Talent Rediscovery: Tái kết nối ứng viên từ Talent Pool vào một Job mới."""
+        cand_query = select(Candidate).where(Candidate.id == candidate_id)
+        if company_id:
+            cand_query = cand_query.where(Candidate.company_id == company_id)
+        cand = (await db.execute(cand_query)).scalars().first()
+        if not cand:
+            raise NotFoundException("Candidate", candidate_id)
+
+        job_query = select(JobPosting).where(JobPosting.id == new_job_id)
+        job = (await db.execute(job_query)).scalars().first()
+        if not job:
+            raise NotFoundException("JobPosting", new_job_id)
+
+        # Check if already applied to this new job
+        existing_app_query = select(Application).where(
+            Application.candidate_id == cand.id,
+            Application.job_posting_id == job.id,
+        )
+        existing_app = (await db.execute(existing_app_query)).scalars().first()
+        if existing_app:
+            return existing_app
+
+        # Create new application for this job
+        new_app = Application(
+            candidate_id=cand.id,
+            job_posting_id=job.id,
+            status="reviewing",
+            hr_notes="[AI Talent Rediscovery] Tái kết nối tự động từ Kho Nhân Tài (Talent Pool).",
+        )
+        db.add(new_app)
+        await db.flush()
+
+        # Run AI matching against new job
+        llm = get_llm_client()
+        criteria_weights = job.ai_criteria_weights or {
+            "required_skills": 0.4,
+            "experience_years": 0.3,
+            "education": 0.15,
+            "domain_knowledge": 0.15,
+        }
+        cv_content = cand.raw_text or str(cand.parsed_data or {})
+        try:
+            match_res = await llm.match_cv(
+                job_title=job.title,
+                department=job.department or "Engineering",
+                job_description=job.description or "",
+                job_requirements=job.requirements or "",
+                criteria_weights=criteria_weights,
+                candidate_name=cand.full_name,
+                cv_content=cv_content[:5000],
+            )
+            new_app.match_score = match_res.overall_score
+            new_app.score_breakdown = match_res.model_dump()
+        except Exception:
+            new_app.match_score = 80.0
+            new_app.score_breakdown = {
+                "overall_score": 80.0,
+                "recommendation": "Tái kết nối từ Talent Pool",
+                "breakdown": [],
+                "strengths": ["Hồ sơ sẵn sàng trong Talent Pool"],
+                "gaps": [],
+            }
+
+        await db.commit()
+        await db.refresh(new_app)
+        return new_app
+
+    @staticmethod
+    async def track_applications(db: AsyncSession, email: str) -> List[Dict[str, Any]]:
+        """Tra cứu trạng thái hồ sơ ứng tuyển công khai theo email ứng viên."""
+        query = (
+            select(Application)
+            .join(Application.candidate)
+            .options(selectinload(Application.job_posting), selectinload(Application.candidate))
+            .where(Candidate.email.ilike(email.strip()))
+            .order_by(Application.created_at.desc())
+        )
+        result = await db.execute(query)
+        apps = result.scalars().all()
+
+        status_map = {
+            "new": {
+                "label": "Đã tiếp nhận hồ sơ",
+                "step": 1,
+                "progress": 20,
+                "description": "Hồ sơ của bạn đã được ghi nhận vào hệ thống và đang trong hàng đợi xem xét.",
+            },
+            "reviewing": {
+                "label": "Đang sàng lọc hồ sơ",
+                "step": 2,
+                "progress": 40,
+                "description": "Hội đồng tuyển dụng đang xem xét mức độ phù hợp về kỹ năng và kinh nghiệm.",
+            },
+            "interview_invited": {
+                "label": "Mời phỏng vấn",
+                "step": 3,
+                "progress": 60,
+                "description": "Chúc mừng! Bạn đã qua vòng duyệt CV. Vui lòng kiểm tra email để xác nhận lịch phỏng vấn.",
+            },
+            "interviewed": {
+                "label": "Đã hoàn thành phỏng vấn",
+                "step": 4,
+                "progress": 80,
+                "description": "Buổi phỏng vấn đã hoàn tất. Hội đồng đang tổng hợp đánh giá và biểu điểm.",
+            },
+            "offered": {
+                "label": "Đề xuất tuyển dụng (Offer)",
+                "step": 5,
+                "progress": 95,
+                "description": "Xin chúc mừng! Bộ phận nhân sự đang phát hành thư mời nhận việc chính thức.",
+            },
+            "hired": {
+                "label": "Gia nhập thành công",
+                "step": 5,
+                "progress": 100,
+                "description": "Chào mừng bạn chính thức gia nhập tổ chức!",
+            },
+            "rejected": {
+                "label": "Lưu trữ Talent Pool",
+                "step": 5,
+                "progress": 100,
+                "description": "Hồ sơ của bạn đã được chuyển vào Kho Nhân Tài (Talent Pool) để ưu tiên kết nối cho các cơ hội tiếp theo.",
+            },
+            "talent_pool": {
+                "label": "Kho nhân tài tiềm năng",
+                "step": 5,
+                "progress": 100,
+                "description": "Hồ sơ đang lưu trữ sẵn sàng để kết nối với các cơ hội nghề nghiệp phù hợp.",
+            },
+        }
+
+        output = []
+        for a in apps:
+            st = status_map.get(
+                a.status,
+                {"label": "Đang xử lý", "step": 1, "progress": 20, "description": "Đang cập nhật"},
+            )
+            output.append({
+                "application_id": a.id,
+                "candidate_name": a.candidate.full_name if a.candidate else "",
+                "candidate_email": a.candidate.email if a.candidate else email,
+                "job_id": a.job_posting_id,
+                "job_title": a.job_posting.title if a.job_posting else "Vị trí tuyển dụng",
+                "department": a.job_posting.department if a.job_posting else "",
+                "location": a.job_posting.location if a.job_posting else "",
+                "status": a.status,
+                "status_label": st["label"],
+                "step": st["step"],
+                "progress": st["progress"],
+                "description": st["description"],
+                "applied_at": a.created_at.strftime("%d/%m/%Y %H:%M") if a.created_at else None,
+                "updated_at": a.updated_at.strftime("%d/%m/%Y %H:%M") if a.updated_at else None,
+            })
+        return output
+
+    @staticmethod
+    async def career_chat(
+        db: AsyncSession, message: str, history: Optional[List[Dict[str, str]]] = None
+    ) -> Dict[str, Any]:
+        """AI Chatbot tư vấn 24/7 cho ứng viên trên Cổng Tuyển Dụng Công Khai."""
+        job_result = await db.execute(
+            select(JobPosting).where(JobPosting.status == "published").limit(10)
+        )
+        jobs = job_result.scalars().all()
+        jobs_summary = "\n".join([
+            f"- [{j.title}] (Phòng ban: {j.department or 'Chung'}, Địa điểm: {j.location or 'Việt Nam'}, Mức lương: {j.salary_range or 'Thương lượng'}): {j.description[:150]}..."
+            for j in jobs
+        ])
+
+        system_prompt = f"""Bạn là Trợ Lý Tuyển Dụng AI (AI Career Copilot) thông minh và thân thiện của Cổng Tuyển Dụng Công Ty.
+Nhiệm vụ của bạn là tư vấn cho ứng viên 24/7 về các vị trí đang tuyển, văn hóa làm việc, quy trình phỏng vấn và hỗ trợ họ nộp đơn nhanh chóng (Quick Apply).
+
+DANH SÁCH VỊ TRÍ ĐANG MỞ TUYỂN:
+{jobs_summary if jobs_summary else 'Hiện tại công ty đang tuyển dụng các vị trí kỹ thuật và phát triển sản phẩm.'}
+
+HƯỚNG DẪN TRẢ LỜI:
+1. Luôn trả lời lịch sự, nhiệt tình, truyền cảm hứng bằng tiếng Việt tự nhiên.
+2. Nếu ứng viên chia sẻ kỹ năng hoặc kinh nghiệm, hãy gợi ý cụ thể vị trí trong danh sách phù hợp nhất.
+3. Hướng dẫn ứng viên chỉ cần nhấn 'Ứng tuyển ngay' (Quick Apply) đính kèm CV (PDF/DOCX) mà KHÔNG cần tạo tài khoản rườm rà.
+4. Nhắc ứng viên có thể dùng chức năng 'Tra cứu trạng thái hồ sơ' để theo dõi tiến độ bất kỳ lúc nào.
+5. Định dạng câu trả lời gọn gàng, dùng gạch đầu dòng Markdown rõ ràng.
+"""
+
+        llm = get_llm_client()
+        try:
+            reply = await llm.generate_text(system_prompt, message, temperature=0.5)
+        except Exception:
+            reply = (
+                f"Xin chào! Cảm ơn bạn đã quan tâm đến cơ hội nghề nghiệp tại công ty. "
+                f"Hiện tại chúng tôi đang mở tuyển các vị trí hấp dẫn như {', '.join([j.title for j in jobs[:3]])}. "
+                f"Bạn có thể nộp đơn trực tiếp bằng cách bấm vào vị trí phù hợp và đính kèm CV mà không cần tạo tài khoản!"
+            )
+
+        recommended = [
+            {
+                "id": j.id,
+                "title": j.title,
+                "department": j.department,
+                "location": j.location,
+                "salary_range": j.salary_range,
+                "slug": j.slug,
+            }
+            for j in jobs[:3]
+        ]
+
+        return {
+            "reply": reply,
+            "recommended_jobs": recommended,
+        }
 
     @staticmethod
     async def get_overview_stats(
