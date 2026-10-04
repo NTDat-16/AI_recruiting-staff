@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -12,7 +12,77 @@ import {
   Briefcase,
   Users,
   X,
+  Sparkles,
+  Calendar,
+  CheckCircle2,
+  Mail,
+  UserPlus,
+  CheckCheck,
 } from "lucide-react";
+
+interface NotificationItem {
+  id: string;
+  type: "ai_match" | "interview" | "application" | "evaluation" | "email";
+  title: string;
+  message: string;
+  timestamp: string | null;
+  is_read: boolean;
+  priority: "high" | "normal" | "info";
+  link_url?: string;
+}
+
+const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "notif-1",
+    type: "ai_match",
+    title: "AI Match Xuất Sắc: 96.0%",
+    message: "Ứng viên Đỗ Quỳnh Anh đạt độ tương thích 96.0% cho vị trí 'AI Research Scientist & LLM Specialist'.",
+    timestamp: "10 phút trước",
+    is_read: false,
+    priority: "high",
+    link_url: "/candidates",
+  },
+  {
+    id: "notif-2",
+    type: "interview",
+    title: "Lịch phỏng vấn sắp diễn ra",
+    message: "Buổi 'Phỏng vấn Kỹ thuật Chuyên sâu AI - Lê Thanh Tùng' lúc 14:00 qua Google Meet.",
+    timestamp: "30 phút trước",
+    is_read: false,
+    priority: "high",
+    link_url: "/interviews",
+  },
+  {
+    id: "notif-3",
+    type: "evaluation",
+    title: "Phỏng vấn hoàn tất & Đã có Rubric",
+    message: "Phiếu đánh giá phỏng vấn cho ứng viên Trần Gia Bảo đã hoàn tất: 9.2/10 (Strong Hire).",
+    timestamp: "2 giờ trước",
+    is_read: false,
+    priority: "normal",
+    link_url: "/evaluations",
+  },
+  {
+    id: "notif-4",
+    type: "email",
+    title: "Đã phát hành Thư Mời Nhận Việc (Job Offer)",
+    message: "Thư mời làm việc đã gửi tới Vũ Hoàng Long (long.vu.qa@qualityfirst.vn).",
+    timestamp: "5 giờ trước",
+    is_read: true,
+    priority: "high",
+    link_url: "/pipeline",
+  },
+  {
+    id: "notif-5",
+    type: "application",
+    title: "Hồ sơ ứng tuyển mới",
+    message: "Ứng viên Đinh Tuyết Mai vừa nộp hồ sơ ứng tuyển vị trí 'AI Research Scientist'.",
+    timestamp: "Hôm qua",
+    is_read: true,
+    priority: "normal",
+    link_url: "/candidates",
+  },
+];
 
 export const AppHeader: React.FC = () => {
   const pathname = usePathname();
@@ -20,6 +90,50 @@ export const AppHeader: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(DEFAULT_NOTIFICATIONS);
+  const [unreadCount, setUnreadCount] = useState<number>(3);
+  const [notifTab, setNotifTab] = useState<"all" | "unread" | "interview" | "match">("all");
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch("/api/v1/candidates/notifications");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.notifications && data.notifications.length > 0) {
+            setNotifications(data.notifications);
+            setUnreadCount(data.unread_count ?? data.notifications.filter((n: NotificationItem) => !n.is_read).length);
+          }
+        }
+      } catch {
+        // Keep default realistic notifications on fetch error
+      }
+    };
+    fetchNotifications();
+  }, []);
+
+  const handleMarkAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  };
+
+  const handleItemClick = (item: NotificationItem) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n))
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+    setShowNotifications(false);
+    if (item.link_url) {
+      router.push(item.link_url);
+    }
+  };
+
+  const filteredNotifications = notifications.filter((n) => {
+    if (notifTab === "unread") return !n.is_read;
+    if (notifTab === "interview") return n.type === "interview" || n.type === "evaluation";
+    if (notifTab === "match") return n.type === "ai_match" || n.type === "application";
+    return true;
+  });
 
   // Xác định chế độ Cổng Ứng Viên (Candidate Portal) hay Bảng Điều Khiển Nhà Tuyển Dụng (Employer / ATS)
   const isCandidatePortal =
@@ -166,36 +280,179 @@ export const AppHeader: React.FC = () => {
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors relative"
-            title="Thông báo"
+            title="Thông báo hệ thống"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-500 text-[10px] text-white font-bold flex items-center justify-center leading-none">
-              1
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-[10px] text-white font-bold flex items-center justify-center leading-none ring-2 ring-white animate-pulse">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <span className="text-xs font-bold text-slate-800">Thông báo mới</span>
-                <span
-                  onClick={() => setShowNotifications(false)}
-                  className="text-[11px] text-blue-600 hover:underline cursor-pointer"
-                >
-                  Đánh dấu đã đọc
-                </span>
-              </div>
-              <div className="py-2 space-y-2 text-xs">
-                <div className="p-2 rounded-lg bg-blue-50/70 border border-blue-100 flex items-start space-x-2.5">
-                  <span className="text-base">✨</span>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900">AI Matching Đạt 94%</p>
-                    <p className="text-slate-600 text-[11px] mt-0.5">
-                      Ứng viên <strong>Nguyễn Văn An</strong> có độ khớp 94% với vị trí Senior Backend (.NET).
-                    </p>
-                    <span className="text-[10px] text-slate-400 block mt-1">10 phút trước</span>
-                  </div>
+            <div className="absolute right-0 mt-2 w-88 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200/90 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+              {/* Header */}
+              <div className="p-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-bold text-slate-900">Thông báo hoạt động</span>
+                  {unreadCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                      {unreadCount} mới
+                    </span>
+                  )}
                 </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    className="text-[11px] text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors"
+                  >
+                    <CheckCheck className="w-3 h-3" />
+                    <span>Đọc tất cả</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Tabs */}
+              <div className="flex border-b border-slate-100 bg-white px-2 pt-1 text-[11px] font-medium text-slate-500">
+                <button
+                  onClick={() => setNotifTab("all")}
+                  className={`px-2.5 py-1.5 border-b-2 transition-all ${
+                    notifTab === "all"
+                      ? "border-blue-600 text-blue-600 font-bold"
+                      : "border-transparent hover:text-slate-800"
+                  }`}
+                >
+                  Tất cả ({notifications.length})
+                </button>
+                <button
+                  onClick={() => setNotifTab("unread")}
+                  className={`px-2.5 py-1.5 border-b-2 transition-all ${
+                    notifTab === "unread"
+                      ? "border-blue-600 text-blue-600 font-bold"
+                      : "border-transparent hover:text-slate-800"
+                  }`}
+                >
+                  Chưa đọc ({unreadCount})
+                </button>
+                <button
+                  onClick={() => setNotifTab("interview")}
+                  className={`px-2.5 py-1.5 border-b-2 transition-all ${
+                    notifTab === "interview"
+                      ? "border-blue-600 text-blue-600 font-bold"
+                      : "border-transparent hover:text-slate-800"
+                  }`}
+                >
+                  Lịch PV
+                </button>
+                <button
+                  onClick={() => setNotifTab("match")}
+                  className={`px-2.5 py-1.5 border-b-2 transition-all ${
+                    notifTab === "match"
+                      ? "border-blue-600 text-blue-600 font-bold"
+                      : "border-transparent hover:text-slate-800"
+                  }`}
+                >
+                  AI Match
+                </button>
+              </div>
+
+              {/* Items List */}
+              <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 text-xs">
+                {filteredNotifications.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400">
+                    <Bell className="w-8 h-8 mx-auto mb-2 opacity-30 text-slate-400" />
+                    <p className="text-xs font-medium">Không có thông báo nào trong danh mục</p>
+                  </div>
+                ) : (
+                  filteredNotifications.map((notif) => {
+                    const getIcon = () => {
+                      switch (notif.type) {
+                        case "ai_match":
+                          return (
+                            <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                              <Sparkles className="w-3.5 h-3.5" />
+                            </div>
+                          );
+                        case "interview":
+                          return (
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                              <Calendar className="w-3.5 h-3.5" />
+                            </div>
+                          );
+                        case "evaluation":
+                          return (
+                            <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </div>
+                          );
+                        case "email":
+                          return (
+                            <div className="w-7 h-7 rounded-lg bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                              <Mail className="w-3.5 h-3.5" />
+                            </div>
+                          );
+                        case "application":
+                        default:
+                          return (
+                            <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                              <UserPlus className="w-3.5 h-3.5" />
+                            </div>
+                          );
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={notif.id}
+                        onClick={() => handleItemClick(notif)}
+                        className={`p-3 flex items-start space-x-2.5 cursor-pointer transition-colors hover:bg-slate-50 ${
+                          !notif.is_read ? "bg-blue-50/30" : "bg-white"
+                        }`}
+                      >
+                        {getIcon()}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <p
+                              className={`text-xs truncate ${
+                                !notif.is_read
+                                  ? "font-bold text-slate-900"
+                                  : "font-medium text-slate-700"
+                              }`}
+                            >
+                              {notif.title}
+                            </p>
+                            {!notif.is_read && (
+                              <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
+                            )}
+                          </div>
+                          <p className="text-slate-600 text-[11px] line-clamp-2 leading-relaxed">
+                            {notif.message}
+                          </p>
+                          <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-400">
+                            <span>{notif.timestamp || "Vừa xong"}</span>
+                            {notif.priority === "high" && (
+                              <span className="text-[9px] font-semibold text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-100">
+                                Quan trọng
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-2.5 bg-slate-50/80 border-t border-slate-100 text-center">
+                <Link
+                  href="/candidates"
+                  onClick={() => setShowNotifications(false)}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-700"
+                >
+                  Xem danh sách ứng viên & tiến trình →
+                </Link>
               </div>
             </div>
           )}

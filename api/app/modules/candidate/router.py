@@ -98,6 +98,27 @@ async def get_overview_stats(
     return await CandidateService.get_overview_stats(db, company_id=company_id)
 
 
+@router.get("/notifications")
+async def get_notifications(
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """Luồng thông báo thời gian thực phục vụ chuông thông báo (Bell Notifications Drawer)."""
+    company_id = current_user.company_id if current_user else None
+    return await CandidateService.get_notifications(db, company_id=company_id)
+
+
+@router.get("/analytics/reports")
+async def get_detailed_analytics_report(
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """Báo cáo phân tích tuyển dụng nâng cao (Funnel, Time-to-Hire, Sources, Departments, AI Score Distribution)."""
+    company_id = current_user.company_id if current_user else None
+    return await CandidateService.get_detailed_analytics_report(db, company_id=company_id)
+
+
+
 @router.get(
     "/{candidate_id}",
     response_model=CandidateResponse,

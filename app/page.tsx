@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Briefcase,
@@ -20,6 +20,38 @@ export default function DashboardPage() {
   const [copilotQuery, setCopilotQuery] = useState("");
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [copilotResponse, setCopilotResponse] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    active_jobs: 12,
+    total_candidates: 40,
+    completed_interviews: 18,
+    offer_acceptance_rate: 88.5,
+    avg_time_to_hire_days: 26,
+  });
+
+  useEffect(() => {
+    fetch("/api/v1/candidates/analytics/reports")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.kpi) {
+          setStats((prev) => ({
+            active_jobs: data.kpi.total_jobs ?? prev.active_jobs,
+            total_candidates: data.kpi.total_candidates ?? prev.total_candidates,
+            completed_interviews: data.kpi.total_interviews ?? prev.completed_interviews,
+            offer_acceptance_rate: parseFloat(data.kpi.offer_acceptance_rate) || prev.offer_acceptance_rate,
+            avg_time_to_hire_days: data.kpi.time_to_hire_days ?? prev.avg_time_to_hire_days,
+          }));
+        } else if (data) {
+          setStats((prev) => ({
+            active_jobs: data.active_jobs ?? prev.active_jobs,
+            total_candidates: data.total_candidates ?? prev.total_candidates,
+            completed_interviews: data.completed_interviews ?? prev.completed_interviews,
+            offer_acceptance_rate: data.offer_acceptance_rate ?? prev.offer_acceptance_rate,
+            avg_time_to_hire_days: data.avg_time_to_hire_days ?? prev.avg_time_to_hire_days,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const sampleQueries = [
     "Tại sao tỷ lệ drop-off ở vòng Phỏng vấn của khối Product cao trong tháng 9?",
@@ -74,7 +106,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3">
             <div className="flex items-baseline space-x-1.5">
-              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">12</span>
+              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{stats.active_jobs}</span>
               <span className="text-xs text-slate-500 font-medium">vị trí</span>
             </div>
             <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1.5">
@@ -94,7 +126,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3">
             <div className="flex items-baseline space-x-1.5">
-              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">1.240</span>
+              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{stats.total_candidates}</span>
               <span className="text-xs text-slate-500 font-medium">hồ sơ</span>
             </div>
             <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1.5">
@@ -114,7 +146,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3">
             <div className="flex items-baseline space-x-1.5">
-              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">18</span>
+              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{stats.completed_interviews}</span>
               <span className="text-xs text-slate-500 font-medium">lượt</span>
             </div>
             <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1.5">
@@ -134,7 +166,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3">
             <div className="flex items-baseline space-x-1.5">
-              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">88.5</span>
+              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{stats.offer_acceptance_rate}</span>
               <span className="text-sm font-bold text-slate-700">%</span>
             </div>
             <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1.5">
@@ -156,7 +188,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3">
             <div className="flex items-baseline space-x-1.5">
-              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">26</span>
+              <span className="text-2xl font-extrabold text-slate-900 tracking-tight">{stats.avg_time_to_hire_days}</span>
               <span className="text-xs text-slate-500 font-medium">ngày</span>
             </div>
             <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1.5">
