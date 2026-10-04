@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,6 +21,7 @@ interface NavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  key?: "requests" | "jobs" | "candidates" | "pipeline" | "interviews";
   badge?: number | string;
   badgeType?: "default" | "ai";
 }
@@ -35,26 +36,31 @@ const navItems: NavItem[] = [
     name: "Yêu cầu tuyển dụng",
     href: "/requests",
     icon: FileText,
+    key: "requests",
   },
   {
     name: "Tin tuyển & JD",
     href: "/jobs",
     icon: Briefcase,
+    key: "jobs",
   },
   {
     name: "Hồ sơ ứng viên",
     href: "/candidates",
     icon: Users,
+    key: "candidates",
   },
   {
     name: "Quy trình tuyển dụng",
     href: "/pipeline",
     icon: ListFilter,
+    key: "pipeline",
   },
   {
     name: "Lịch phỏng vấn & AI",
     href: "/interviews",
     icon: Calendar,
+    key: "interviews",
   },
   {
     name: "Talent Pool & Rediscovery",
@@ -73,6 +79,104 @@ const navItems: NavItem[] = [
 export const AppSidebar: React.FC = () => {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [counts, setCounts] = useState<{
+    requests?: number;
+    jobs?: number;
+    candidates?: number;
+    pipeline?: number;
+    interviews?: number;
+  }>({});
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchCounts = async () => {
+      try {
+        let token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        // 1. Fetch overview stats for fast consolidated metrics
+        let statsJobs = 0;
+        let statsCandidates = 0;
+        let statsInterviews = 0;
+
+        try {
+          const statsRes = await fetch("/api/v1/candidates/overview/stats", { headers });
+          if (statsRes.ok) {
+            const statsData = await statsRes.json();
+            statsJobs = statsData.total_jobs ?? 0;
+            statsCandidates = statsData.total_candidates ?? 0;
+            statsInterviews = statsData.total_interviews ?? 0;
+          }
+        } catch {}
+
+        // 2. Fetch candidates & pipeline count to strictly match pipeline and candidate pages
+        let candidatesCount = statsCandidates;
+        let pipelineCount = statsCandidates;
+
+        try {
+          const candRes = await fetch("/api/v1/candidates", { headers });
+          if (candRes.ok) {
+            const cands = await candRes.json();
+            if (Array.isArray(cands)) {
+              candidatesCount = cands.length;
+              let appsTotal = 0;
+              cands.forEach((c: any) => {
+                const apps = c.applications && c.applications.length > 0 ? c.applications : [null];
+                appsTotal += apps.length;
+              });
+              pipelineCount = appsTotal || cands.length;
+            }
+          }
+        } catch {}
+
+        // 3. Fetch jobs & requests count
+        let jobsCount = statsJobs;
+        try {
+          const jobRes = await fetch("/api/v1/jobs/public");
+          if (jobRes.ok) {
+            const jobs = await jobRes.json();
+            if (Array.isArray(jobs)) {
+              jobsCount = jobs.length;
+            }
+          }
+        } catch {}
+
+        // 4. Fetch interviews count
+        let interviewsCount = statsInterviews;
+        try {
+          const intRes = await fetch("/api/v1/interviews", { headers });
+          if (intRes.ok) {
+            const ints = await intRes.json();
+            if (Array.isArray(ints)) {
+              interviewsCount = ints.length;
+            }
+          }
+        } catch {}
+
+        if (isMounted) {
+          setCounts({
+            requests: jobsCount,
+            jobs: jobsCount,
+            candidates: candidatesCount,
+            pipeline: pipelineCount,
+            interviews: interviewsCount,
+          });
+        }
+      } catch (err) {
+        console.error("Error loading sidebar counts:", err);
+      }
+    };
+
+    fetchCounts();
+
+    window.addEventListener("ats_data_updated", fetchCounts);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("ats_data_updated", fetchCounts);
+    };
+  }, [pathname]);
 
   return (
     <aside
@@ -89,6 +193,13 @@ export const AppSidebar: React.FC = () => {
             item.href === "/"
               ? pathname === "/"
               : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+          const badgeValue =
+            item.badgeType === "ai"
+              ? item.badge
+              : item.key && counts[item.key] !== undefined
+              ? counts[item.key]
+              : item.badge;
 
           return (
             <Link
@@ -112,11 +223,11 @@ export const AppSidebar: React.FC = () => {
                 )}
               </div>
 
-              {!collapsed && item.badge !== undefined && (
+              {!collapsed && badgeValue !== undefined && badgeValue !== null && (
                 <div>
                   {item.badgeType === "ai" ? (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-600 text-white shadow-xs">
-                      {item.badge}
+                      {badgeValue}
                     </span>
                   ) : (
                     <span
@@ -126,7 +237,7 @@ export const AppSidebar: React.FC = () => {
                           : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
                       }`}
                     >
-                      {item.badge}
+                      {badgeValue}
                     </span>
                   )}
                 </div>
