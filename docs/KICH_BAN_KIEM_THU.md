@@ -179,7 +179,51 @@ Phạm vi kịch bản bao gồm:
 
 **Đạt khi:** email log chính xác; email cùng loại trong cùng chu kỳ chỉ phát hành một lần.
 
-## 6. Ưu tiên và tiêu chí nghiệm thu
+## 6. Chạy UAT ứng tuyển bằng CV thật trên hệ thống đang hoạt động
+
+Đây là quy trình kiểm thử có người dùng thật tự nộp hồ sơ bằng CV của chính họ, trên một JD đã được công ty cho phép nhận hồ sơ. Không dùng CV của người khác nếu chưa có đồng ý rõ ràng. Chỉ chạy trên staging đã được cấu hình lưu trữ và AI phù hợp, hoặc production khi chủ hệ thống đồng ý việc tạo hồ sơ thử. Không gửi CV thật qua provider AI bên ngoài trước khi người nộp biết và đồng ý cách xử lý đó.
+
+**Cổng an toàn hiện tại: chưa nộp CV có thông tin nhận dạng vào bản triển khai này cho đến khi xác minh quyền truy cập CV.** `api/app/main.py` mount nguyên thư mục `storage/` công khai tại `/storage`, trong khi CV được ghi dưới `storage/cvs/`; do đó cần chứng minh URL CV không truy cập được khi chưa xác thực trước khi dùng CV cá nhân. Cũng cần kiểm tra endpoint tra cứu trạng thái theo email trước UAT. Nếu CV/đơn ứng tuyển có thể lấy được chỉ bằng URL hoặc email, UAT với dữ liệu thật phải chờ biện pháp kiểm soát truy cập phù hợp.
+
+### Điều kiện trước khi bắt đầu
+
+1. Có URL hệ thống đang chạy, URL JD published cụ thể và liên hệ HR phụ trách để xác nhận đây là hồ sơ UAT, không bị hiểu nhầm là ứng viên tuyển dụng thật.
+2. Người thử dùng CV của mình (hoặc có quyền nộp thay), email/số điện thoại do mình kiểm soát; ghi lại thời điểm bắt đầu. Không đưa CV, email, số điện thoại hay token vào báo cáo kiểm thử.
+3. HR xác nhận ai được phép xem hồ sơ, thời gian lưu và cách xóa hồ sơ/tệp sau UAT; xác nhận provider AI đang dùng là mock hay dịch vụ bên ngoài.
+4. Xác minh nơi lưu CV tồn tại bền vững và được bảo vệ. Mã hiện ghi CV vào `storage/cvs` cục bộ; Docker Compose mount thư mục `storage`, nhưng cần xác minh cấu hình deploy thực tế trước khi dùng CV cá nhân. Không giả định lưu cục bộ của serverless là bền vững.
+5. Với một hồ sơ staging đã được phép dùng, thử lấy URL CV và tra cứu trạng thái từ trình duyệt ẩn danh/không token. Cả hai phải từ chối truy cập hoặc chỉ tiết lộ thông tin tối thiểu theo cơ chế đã duyệt. Hiện static mount cho thấy CV có thể công khai; nếu xác nhận được, dừng và không dùng CV thật.
+6. Kiểm tra giới hạn upload thực tế. Form hiển thị tối đa 15 MB nhưng API hiện chưa thấy kiểm tra kích thước phía server; không thử tệp lớn bằng CV thật.
+7. Ghi nhận trạng thái hệ thống trước thử: `/health`, mã JD/trạng thái, provider cấu hình, HR có thể đăng nhập; xác nhận email chỉ gửi qua sandbox nếu luồng email được thực hiện.
+
+### Các bước chạy ứng tuyển thật
+
+| Bước | Thao tác của người thử / HR | Kết quả cần ghi nhận |
+|---|---|---|
+| LIVE-01 | Mở link JD từ cổng việc làm công khai; đối chiếu chức danh, mô tả, địa điểm và trạng thái với HR. | JD đúng công ty/vị trí, nội dung mới nhất, nút ứng tuyển dẫn tới đúng `job_id`; không dùng JD draft/closed. |
+| LIVE-02 | Mở form, nhập họ tên/email/số điện thoại của người thử, chọn CV PDF hoặc DOCX thật của chính người thử. Kiểm tra tên tệp trước khi gửi. | Tên tệp được hiển thị; dữ liệu đúng; không gửi nhầm CV; form không yêu cầu trường không cần thiết. |
+| LIVE-03 | Nhấn nộp đúng một lần, giữ trang mở đến khi có kết quả; ghi giờ gửi và thông báo UI, không chụp/đính kèm thông tin cá nhân vào ticket. | UI báo thành công chỉ khi server trả thành công; nếu timeout/lỗi thì ghi mã lỗi và hỏi HR trước khi retry để tránh đơn trùng. |
+| LIVE-04 | Tra cứu trạng thái bằng email người thử qua `/careers/track` hoặc yêu cầu HR xác minh hồ sơ vừa tạo. | Hồ sơ gắn đúng JD, thời gian và trạng thái `new`; chỉ người thử/HR được xem dữ liệu cần thiết. |
+| LIVE-05 | HR mở candidate detail: xác minh tên/email, CV URL/file, text trích xuất, dữ liệu parse, avatar nếu có, application và match score/breakdown. | File mở được đúng quyền; parse không mất dấu tiếng Việt/đảo thứ tự; score thuộc 0–100 và breakdown khớp dữ liệu; không coi điểm AI là quyết định tuyển dụng. |
+| LIVE-06 | HR kiểm tra log/backend AI để biết provider thật sự đã dùng hay fallback sang mock; xác minh không có CV/PII trong log không cần thiết. | Nêu rõ kết quả có AI thật hay fallback; không ghi nhận điểm giả lập là đánh giá provider thật. |
+| LIVE-07 | HR cập nhật trạng thái hồ sơ sang bước kế tiếp rồi quay lại trang tracking bằng email ứng viên. | Trạng thái mới đồng nhất giữa HR và cổng ứng viên; lịch sử liên kết đúng application. |
+| LIVE-08 | Sau khi HR xác nhận hoàn tất, yêu cầu xóa candidate/application/CV/avatar theo chính sách; xác minh DB, storage, backup/log theo khả năng hệ thống. | Xóa/ẩn đúng các bản ghi đã tạo; ghi nhận phần còn lưu theo retention; không xóa nhầm hồ sơ tuyển dụng khác. |
+
+### Tiêu chí dừng và lỗi cần ghi nhận
+
+- Dừng trước khi gửi nếu JD không đúng hoặc chưa được HR xác nhận, trang sai hostname/môi trường, provider/retention chưa rõ, hoặc có nguy cơ CV bị lộ công khai.
+- Nếu server trả timeout sau khi đã nhấn gửi, không gửi lại ngay. HR cần kiểm tra theo email/JD/thời gian trước để tránh tạo lần xử lý thứ hai.
+- Dừng sau phản hồi lỗi 5xx, lỗi parse, link CV không mở, dữ liệu hiển thị nhầm người/JD, hay điểm AI không có breakdown; giữ lại thời điểm và mã correlation/task nếu có, không gửi nguyên CV trong báo cáo.
+- Bài UAT này không kiểm tra deliverability bằng cách gửi offer/interview đến ứng viên thật; chỉ dùng sandbox cho email.
+
+### Các điểm mã nguồn ảnh hưởng tới UAT thật
+
+- Form yêu cầu tệp và hiển thị `.pdf/.docx/.doc`, còn API cho phép thiếu CV và service chỉ chấp nhận `.pdf/.docx/.txt`; `.doc` có thể bị từ chối. Nên chỉ chọn PDF/DOCX trong lần UAT.
+- Dòng chữ tối đa 15 MB hiện chỉ ở UI; chưa thấy giới hạn phía backend. Chỉ dùng CV nhỏ hơn giới hạn hiển thị và vẫn coi đây là giới hạn giao diện, không phải bảo vệ server.
+- Trang thành công không đọc ID/status trả về từ API. Đối chiếu hồ sơ qua trang tracking hoặc HR, không dựa vào thông báo thành công đơn lẻ.
+- Service gọi parse/matching/embedding trong request ứng tuyển và fallback matching/parse sang mock khi provider lỗi. Nếu điểm xuất hiện, cần kiểm tra cấu hình/log để phân biệt kết quả provider thật với fallback; response hiện không nêu nguồn kết quả.
+- Tài liệu công nghệ đề xuất S3-compatible storage và xử lý AI nền, nhưng luồng hiện tại ghi tệp vào `storage/` cục bộ và chạy AI trong request. Xác minh deploy thực tế trước UAT; trên môi trường serverless không được mặc định file cục bộ sẽ bền vững.
+
+## 7. Ưu tiên và tiêu chí nghiệm thu
 
 - **P0:** bảo mật/tenant, đăng nhập, vòng đời JD, ứng tuyển và tệp, pipeline, lịch không trùng, consent âm thanh, chống gửi email trùng, các luồng E2E. Không được có lỗi P0 trước nghiệm thu.
 - **P1:** nhánh provider lỗi, talent pool, phân loại email, báo cáo, UI lỗi/empty, migration/worker/restart và kiểm tra responsive cơ bản.
@@ -187,7 +231,7 @@ Phạm vi kịch bản bao gồm:
 - Với mọi P0/P1: lưu request/response đã loại bỏ PII, log task ID, ảnh chụp UI cần thiết và truy vấn xác minh DB; không lưu CV/audio thật vào báo cáo.
 - Nghiệm thu: tất cả P0 đạt; không có lỗi dữ liệu hoặc cô lập tenant; lỗi provider/hạ tầng được báo đúng; tất cả P1 đã chạy hoặc có lý do hoãn được ghi nhận.
 
-## 7. Đối chiếu với kiểm thử hiện có và lưu ý
+## 8. Đối chiếu với kiểm thử hiện có và lưu ý
 
 Trong mã hiện có, pytest tập trung vào auth, tạo/publish JD, nộp hồ sơ/matching/pipeline/feedback và một số năng lực AI mock (`api/tests/`). Các script `api/test_*.py`, `api/verify_*.py`, `api/run_production_tests.py` bổ sung kiểm thử thủ công/tích hợp về avatar, luồng người dùng, email/phỏng vấn và AI. `test_results.md` ghi báo cáo lịch sử ngày 27/09/2026 với các kết quả đạt; tài liệu này **không xác minh lại** các con số đó trên trạng thái mã hiện tại.
 
