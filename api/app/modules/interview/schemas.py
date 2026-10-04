@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel, Field
 from app.ai.schemas import SuggestedQuestion
 
@@ -43,7 +43,7 @@ class InterviewResponse(BaseModel):
     meeting_link: Optional[str] = None
     location: Optional[str] = None
     confirmation_status: str
-    ai_suggested_questions: Optional[List[Dict[str, Any]]] = None
+    ai_suggested_questions: Optional[List[Union[Dict[str, Any], str]]] = None
     created_at: datetime
 
     class Config:

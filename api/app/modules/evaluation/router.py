@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, UploadFile, File, Form, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -10,6 +11,15 @@ from app.modules.evaluation.service import EvaluationService
 from app.shared.permissions import get_current_token_payload, RequireRoles, UserRole, TokenData
 
 router = APIRouter(prefix="/evaluations", tags=["Interview Evaluations"])
+
+
+@router.get(
+    "",
+    response_model=List[InterviewEvaluationResponse],
+)
+async def list_evaluations(db: AsyncSession = Depends(get_db)):
+    """Lấy danh sách tất cả các đánh giá phỏng vấn."""
+    return await EvaluationService.list_evaluations(db)
 
 
 @router.post(

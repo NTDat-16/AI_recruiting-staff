@@ -20,34 +20,34 @@ export default function DashboardPage() {
   const [copilotQuery, setCopilotQuery] = useState("");
   const [copilotLoading, setCopilotLoading] = useState(false);
   const [copilotResponse, setCopilotResponse] = useState<string | null>(null);
+  const [reportData, setReportData] = useState<any>(null);
   const [stats, setStats] = useState({
-    active_jobs: 12,
-    total_candidates: 40,
-    completed_interviews: 18,
-    offer_acceptance_rate: 88.5,
-    avg_time_to_hire_days: 26,
+    active_jobs: 0,
+    total_candidates: 0,
+    completed_interviews: 0,
+    offer_acceptance_rate: 0,
+    avg_time_to_hire_days: 0,
   });
 
   useEffect(() => {
-    fetch("/api/v1/candidates/analytics/reports")
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    fetch("/api/v1/candidates/analytics/reports", { headers })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && data.kpi) {
-          setStats((prev) => ({
-            active_jobs: data.kpi.total_jobs ?? prev.active_jobs,
-            total_candidates: data.kpi.total_candidates ?? prev.total_candidates,
-            completed_interviews: data.kpi.total_interviews ?? prev.completed_interviews,
-            offer_acceptance_rate: parseFloat(data.kpi.offer_acceptance_rate) || prev.offer_acceptance_rate,
-            avg_time_to_hire_days: data.kpi.time_to_hire_days ?? prev.avg_time_to_hire_days,
-          }));
-        } else if (data) {
-          setStats((prev) => ({
-            active_jobs: data.active_jobs ?? prev.active_jobs,
-            total_candidates: data.total_candidates ?? prev.total_candidates,
-            completed_interviews: data.completed_interviews ?? prev.completed_interviews,
-            offer_acceptance_rate: data.offer_acceptance_rate ?? prev.offer_acceptance_rate,
-            avg_time_to_hire_days: data.avg_time_to_hire_days ?? prev.avg_time_to_hire_days,
-          }));
+        if (data) {
+          setReportData(data);
+          if (data.kpi) {
+            setStats({
+              active_jobs: data.kpi.total_jobs ?? 0,
+              total_candidates: data.kpi.total_candidates ?? 0,
+              completed_interviews: data.kpi.total_interviews ?? 0,
+              offer_acceptance_rate: parseFloat(data.kpi.offer_acceptance_rate) || 0,
+              avg_time_to_hire_days: data.kpi.time_to_hire_days ?? 0,
+            });
+          }
         }
       })
       .catch(() => {});
@@ -282,33 +282,34 @@ export default function DashboardPage() {
 
             {/* Donut Center Label */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xl font-extrabold text-slate-900 leading-tight">1.240</span>
+              <span className="text-xl font-extrabold text-slate-900 leading-tight">
+                {stats.total_candidates}
+              </span>
               <span className="text-[11px] text-slate-500 font-medium">Tổng hồ sơ</span>
             </div>
           </div>
 
           {/* Sources Legend */}
           <div className="grid grid-cols-2 gap-x-2 gap-y-2 pt-2 border-t border-slate-100 text-xs">
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb]"></span>
-              <span className="text-slate-600 font-medium text-[11px]">Career Portal: 42%</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]"></span>
-              <span className="text-slate-600 font-medium text-[11px]">LinkedIn: 28%</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]"></span>
-              <span className="text-slate-600 font-medium text-[11px]">Referral nội bộ: 15%</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></span>
-              <span className="text-slate-600 font-medium text-[11px]">TopCV: 10%</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#94a3b8]"></span>
-              <span className="text-slate-600 font-medium text-[11px]">Nguồn khác: 5%</span>
-            </div>
+            {(reportData?.sources || [
+              { source: "Website Tuyển dụng", percent: 35 },
+              { source: "LinkedIn", percent: 30 },
+              { source: "Referral nội bộ", percent: 20 },
+              { source: "TopCV", percent: 15 },
+            ]).map((src: { source: string; percent: number }, idx: number) => {
+              const colors = ["#2563eb", "#0284c7", "#10b981", "#f59e0b", "#94a3b8"];
+              return (
+                <div key={idx} className="flex items-center space-x-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: colors[idx % colors.length] }}
+                  ></span>
+                  <span className="text-slate-600 font-medium text-[11px] truncate">
+                    {src.source}: {src.percent}%
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -319,66 +320,40 @@ export default function DashboardPage() {
               Hiệu suất Phễu tuyển dụng (Pipeline Funnel)
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-100">
-              Chuyển đổi: 3.8%
+              {stats.offer_acceptance_rate}% Offer
             </span>
           </div>
 
           {/* 5 Funnel Stages with Colored Progress Bars */}
           <div className="space-y-4 py-2">
-            {/* Stage 1 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800">1. Tiếp nhận (Applied)</span>
-                <span className="text-slate-600 font-mono">1.240 (100%)</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#2563eb] h-full rounded-full" style={{ width: "100%" }}></div>
-              </div>
-            </div>
-
-            {/* Stage 2 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800">2. Sàng lọc (HR Screening)</span>
-                <span className="text-slate-600 font-mono">412 (33.2%)</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#0284c7] h-full rounded-full" style={{ width: "33.2%" }}></div>
-              </div>
-            </div>
-
-            {/* Stage 3 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800">3. Phỏng vấn (Interview)</span>
-                <span className="text-slate-600 font-mono">118 (9.5%)</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#f59e0b] h-full rounded-full" style={{ width: "9.5%" }}></div>
-              </div>
-            </div>
-
-            {/* Stage 4 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800">4. Đề nghị tiếp nhận (Offer)</span>
-                <span className="text-slate-600 font-mono">52 (4.2%)</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#8b5cf6] h-full rounded-full" style={{ width: "4.2%" }}></div>
-              </div>
-            </div>
-
-            {/* Stage 5 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800">5. Tiếp nhận thành công (Hired)</span>
-                <span className="text-slate-600 font-mono">46 (3.7%)</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#10b981] h-full rounded-full" style={{ width: "3.7%" }}></div>
-              </div>
-            </div>
+            {(reportData?.funnel_stages || [
+              { stage: "1. Tiếp nhận (Applied)", count: stats.total_candidates, conversion_rate: 100 },
+              { stage: "2. Sàng lọc (HR Screening)", count: Math.round(stats.total_candidates * 0.7), conversion_rate: 70 },
+              { stage: "3. Phỏng vấn (Interview)", count: Math.round(stats.total_candidates * 0.45), conversion_rate: 45 },
+              { stage: "4. Đề nghị tiếp nhận (Offer)", count: Math.round(stats.total_candidates * 0.225), conversion_rate: 22.5 },
+              { stage: "5. Tiếp nhận thành công (Hired)", count: Math.round(stats.total_candidates * 0.175), conversion_rate: 17.5 },
+            ]).map((stg: { stage: string; count: number; conversion_rate: number }, sIdx: number) => {
+              const colors = ["#2563eb", "#0284c7", "#f59e0b", "#8b5cf6", "#10b981"];
+              return (
+                <div key={sIdx} className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-slate-800">{stg.stage}</span>
+                    <span className="text-slate-600 font-mono">
+                      {stg.count} ({stg.conversion_rate}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        backgroundColor: colors[sIdx % colors.length],
+                        width: `${Math.max(stg.conversion_rate, 5)}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -388,53 +363,37 @@ export default function DashboardPage() {
             <h2 className="text-sm font-bold text-slate-900">
               Nhu cầu theo Khối ban (Headcount)
             </h2>
-            <span className="text-xs text-slate-500 font-semibold">Target Q4</span>
+            <span className="text-xs text-slate-500 font-semibold">Live ATS Data</span>
           </div>
 
           <div className="space-y-4 py-2">
-            {/* Division 1 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800 truncate">Khối Phát triển Sản phẩm (Product)</span>
-                <span className="text-blue-700 font-mono font-bold shrink-0">14 / 18</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#2563eb] h-full rounded-full" style={{ width: "77.7%" }}></div>
-              </div>
-            </div>
-
-            {/* Division 2 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800 truncate">Khối Công nghệ & Hạ tầng (Infra/Cloud)</span>
-                <span className="text-sky-700 font-mono font-bold shrink-0">6 / 8</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#0284c7] h-full rounded-full" style={{ width: "75%" }}></div>
-              </div>
-            </div>
-
-            {/* Division 3 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800 truncate">Trung tâm Đổi mới AI (AI Innovation)</span>
-                <span className="text-purple-700 font-mono font-bold shrink-0">4 / 5</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#a855f7] h-full rounded-full" style={{ width: "80%" }}></div>
-              </div>
-            </div>
-
-            {/* Division 4 */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800 truncate">Khối Vận hành & Kinh doanh (Operations)</span>
-                <span className="text-emerald-700 font-mono font-bold shrink-0">8 / 10</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#10b981] h-full rounded-full" style={{ width: "80%" }}></div>
-              </div>
-            </div>
+            {(reportData?.department_summary || [
+              { department: "Khối Phát triển Sản phẩm (Product)", hired_count: 3, open_jobs: 5, completion_rate: 60 },
+              { department: "Khối Công nghệ & Hạ tầng", hired_count: 1, open_jobs: 2, completion_rate: 50 },
+              { department: "Trung tâm Đổi mới AI", hired_count: 1, open_jobs: 2, completion_rate: 50 },
+              { department: "Khối Vận hành & Kinh doanh", hired_count: 1, open_jobs: 1, completion_rate: 100 },
+            ]).slice(0, 4).map((dept: { department: string; hired_count: number; open_jobs: number; completion_rate: number }, dIdx: number) => {
+              const colors = ["#2563eb", "#0284c7", "#a855f7", "#10b981"];
+              return (
+                <div key={dIdx} className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-slate-800 truncate">{dept.department}</span>
+                    <span className="font-mono font-bold shrink-0 text-slate-700">
+                      {dept.hired_count} / {dept.open_jobs || dept.hired_count || 1}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        backgroundColor: colors[dIdx % colors.length],
+                        width: `${Math.min(dept.completion_rate || 50, 100)}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

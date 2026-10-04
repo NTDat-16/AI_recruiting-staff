@@ -31,67 +31,14 @@ interface NotificationItem {
   link_url?: string;
 }
 
-const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "notif-1",
-    type: "ai_match",
-    title: "AI Match Xuất Sắc: 96.0%",
-    message: "Ứng viên Đỗ Quỳnh Anh đạt độ tương thích 96.0% cho vị trí 'AI Research Scientist & LLM Specialist'.",
-    timestamp: "10 phút trước",
-    is_read: false,
-    priority: "high",
-    link_url: "/candidates",
-  },
-  {
-    id: "notif-2",
-    type: "interview",
-    title: "Lịch phỏng vấn sắp diễn ra",
-    message: "Buổi 'Phỏng vấn Kỹ thuật Chuyên sâu AI - Lê Thanh Tùng' lúc 14:00 qua Google Meet.",
-    timestamp: "30 phút trước",
-    is_read: false,
-    priority: "high",
-    link_url: "/interviews",
-  },
-  {
-    id: "notif-3",
-    type: "evaluation",
-    title: "Phỏng vấn hoàn tất & Đã có Rubric",
-    message: "Phiếu đánh giá phỏng vấn cho ứng viên Trần Gia Bảo đã hoàn tất: 9.2/10 (Strong Hire).",
-    timestamp: "2 giờ trước",
-    is_read: false,
-    priority: "normal",
-    link_url: "/evaluations",
-  },
-  {
-    id: "notif-4",
-    type: "email",
-    title: "Đã phát hành Thư Mời Nhận Việc (Job Offer)",
-    message: "Thư mời làm việc đã gửi tới Vũ Hoàng Long (long.vu.qa@qualityfirst.vn).",
-    timestamp: "5 giờ trước",
-    is_read: true,
-    priority: "high",
-    link_url: "/pipeline",
-  },
-  {
-    id: "notif-5",
-    type: "application",
-    title: "Hồ sơ ứng tuyển mới",
-    message: "Ứng viên Đinh Tuyết Mai vừa nộp hồ sơ ứng tuyển vị trí 'AI Research Scientist'.",
-    timestamp: "Hôm qua",
-    is_read: true,
-    priority: "normal",
-    link_url: "/candidates",
-  },
-];
-
 export const AppHeader: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(DEFAULT_NOTIFICATIONS);
-  const [unreadCount, setUnreadCount] = useState<number>(3);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notifTab, setNotifTab] = useState<"all" | "unread" | "interview" | "match">("all");
 
   useEffect(() => {
@@ -100,13 +47,13 @@ export const AppHeader: React.FC = () => {
         const res = await fetch("/api/v1/candidates/notifications");
         if (res.ok) {
           const data = await res.json();
-          if (data.notifications && data.notifications.length > 0) {
+          if (data.notifications) {
             setNotifications(data.notifications);
             setUnreadCount(data.unread_count ?? data.notifications.filter((n: NotificationItem) => !n.is_read).length);
           }
         }
       } catch {
-        // Keep default realistic notifications on fetch error
+        // Leave empty on network failure
       }
     };
     fetchNotifications();

@@ -152,3 +152,9 @@ class EvaluationService:
                 "transcript": evaluation.transcript,
             },
         )
+
+    @staticmethod
+    async def list_evaluations(db: AsyncSession) -> list[InterviewEvaluation]:
+        result = await db.execute(select(InterviewEvaluation).order_by(InterviewEvaluation.created_at.desc()))
+        return list(result.scalars().all())
+

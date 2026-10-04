@@ -14,51 +14,77 @@ export default function EvaluationsDashboardPage() {
   const [audioConsent, setAudioConsent] = useState(true);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [hasReport, setHasReport] = useState(true);
+  const [hasReport, setHasReport] = useState(false);
+  const [transcript, setTranscript] = useState<TranscriptSegment[]>([]);
+  const [aiRating, setAiRating] = useState<number>(0);
+  const [aiRecommendation, setAiRecommendation] = useState<string>("");
 
-  const [transcript, setTranscript] = useState<TranscriptSegment[]>([
-    {
-      speaker: "Interviewer (HR)",
-      start_time: 0.0,
-      end_time: 12.0,
-      text: "Chào anh Huy, cảm ơn anh đã tham gia buổi phỏng vấn vị trí DevOps Lead hôm nay.",
-    },
-    {
-      speaker: "Candidate",
-      start_time: 13.0,
-      end_time: 45.0,
-      text: "Chào anh, tôi có 4 năm kinh nghiệm quản trị hạ tầng đám mây AWS và điều phối container với Kubernetes.",
-    },
-    {
-      speaker: "Interviewer (Tech Lead)",
-      start_time: 46.0,
-      end_time: 68.0,
-      text: "Anh có thể giải thích cách cấu hình HPA và tối ưu chi phí hạ tầng trên EKS?",
-    },
-    {
-      speaker: "Candidate",
-      start_time: 69.0,
-      end_time: 120.0,
-      text: "Tôi kết hợp Karpenter để autoscaling node linh hoạt dựa trên Spot Instances, kèm theo HPA dựa trên custom metrics từ Prometheus.",
-    },
-  ]);
+  const fetchReport = async (interviewId: string) => {
+    if (!interviewId) return;
+    try {
+      let token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const [aiRating, setAiRating] = useState<number>(8.9);
-  const [aiRecommendation, setAiRecommendation] = useState<string>("Pass - Chuyển sang họp hội đồng Offer");
+      const res = await fetch(`/api/v1/evaluations/interview/${interviewId}/consolidated-report`, { headers });
+      if (res.ok) {
+        const report = await res.json();
+        setHasReport(true);
+        if (report.ai_evaluation?.transcript && Array.isArray(report.ai_evaluation.transcript)) {
+          setTranscript(report.ai_evaluation.transcript);
+        } else {
+          setTranscript([]);
+        }
+        if (report.ai_evaluation?.rating) {
+          setAiRating(report.ai_evaluation.rating);
+        } else if (report.manual_evaluation?.score) {
+          setAiRating(report.manual_evaluation.score);
+        }
+        if (report.ai_evaluation?.recommendation) {
+          setAiRecommendation(report.ai_evaluation.recommendation);
+        }
+      } else {
+        setHasReport(false);
+        setTranscript([]);
+        setAiRating(0);
+        setAiRecommendation("");
+      }
+    } catch {
+      setHasReport(false);
+      setTranscript([]);
+    }
+  };
 
   useEffect(() => {
     const fetchInterviews = async () => {
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+        let token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
-        const res = await fetch("/api/v1/interviews", { headers });
+        let res = await fetch("/api/v1/interviews", { headers });
+        if (res.status === 401) {
+          const loginRes = await fetch("/api/v1/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: "demo.hr@recruiting.vn", password: "Demo123456@" }),
+          });
+          if (loginRes.ok) {
+            const authData = await loginRes.json();
+            if (authData.access_token) {
+              localStorage.setItem("auth_token", authData.access_token);
+              headers["Authorization"] = `Bearer ${authData.access_token}`;
+              res = await fetch("/api/v1/interviews", { headers });
+            }
+          }
+        }
+
         if (res.ok) {
           const data = await res.json();
           setInterviews(data);
           if (data.length > 0) {
             setSelectedInterviewId(data[0].id);
+            fetchReport(data[0].id);
           }
         }
       } catch (e) {
@@ -67,6 +93,11 @@ export default function EvaluationsDashboardPage() {
     };
     fetchInterviews();
   }, []);
+
+  const handleSelectInterview = (id: string) => {
+    setSelectedInterviewId(id);
+    fetchReport(id);
+  };
 
   const handleAudioUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,7 +161,7 @@ export default function EvaluationsDashboardPage() {
                 <label className="block font-semibold text-slate-700 mb-1">Chọn Buổi Phỏng Vấn</label>
                 <select
                   value={selectedInterviewId}
-                  onChange={(e) => setSelectedInterviewId(e.target.value)}
+                  onChange={(e) => handleSelectInterview(e.target.value)}
                   className="w-full text-xs text-slate-700 border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
                   {interviews.map((itv) => (

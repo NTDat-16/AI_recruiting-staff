@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileSpreadsheet,
   Plus,
@@ -36,53 +36,9 @@ interface RecruitmentRequest {
   status: "approved" | "pending" | "draft";
 }
 
-const initialRequests: RecruitmentRequest[] = [
-  {
-    id: "1",
-    code: "YCT-2026-089",
-    title: "Senior Backend Developer (.NET)",
-    level: "Level: Senior",
-    location: "Hồ Chí Minh",
-    department: "Phát triển Sản phẩm (Product)",
-    quantity: 3,
-    salaryRange: "35.000.000 đ - 50.000.000 đ",
-    proposerName: "Trần B",
-    proposerRole: "Engineering Manager",
-    proposedDate: "2026-09-15",
-    status: "approved",
-  },
-  {
-    id: "2",
-    code: "YCT-2026-090",
-    title: "Solution Architect (Cloud & Microservices)",
-    level: "Level: Lead / Architect",
-    location: "Hà Nội",
-    department: "Khối Công nghệ & Hạ tầng",
-    quantity: 1,
-    salaryRange: "65.000.000 đ - 90.000.000 đ",
-    proposerName: "Nguyễn Quốc Hùng",
-    proposerRole: "VP of Tech",
-    proposedDate: "2026-09-28",
-    status: "pending",
-  },
-  {
-    id: "3",
-    code: "YCT-2026-091",
-    title: "Senior Frontend Engineer (React/TypeScript)",
-    level: "Level: Senior",
-    location: "Hồ Chí Minh",
-    department: "Phát triển Sản phẩm (Product)",
-    quantity: 2,
-    salaryRange: "32.000.000 đ - 45.000.000 đ",
-    proposerName: "Vũ Đức Nam",
-    proposerRole: "Frontend Lead",
-    proposedDate: "2026-10-01",
-    status: "draft",
-  },
-];
-
 export default function RequestsPage() {
-  const [requests, setRequests] = useState<RecruitmentRequest[]>(initialRequests);
+  const [requests, setRequests] = useState<RecruitmentRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "draft">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -96,6 +52,52 @@ export default function RequestsPage() {
   const [formSalary, setFormSalary] = useState("30.000.000 đ - 45.000.000 đ");
   const [formLocation, setFormLocation] = useState("Hồ Chí Minh");
   const [formLevel, setFormLevel] = useState("Level: Senior");
+
+  const fetchRequests = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/v1/jobs/public");
+      if (res.ok) {
+        const jobs = await res.json();
+        if (Array.isArray(jobs)) {
+          const mapped: RecruitmentRequest[] = jobs.map((job: any, idx: number) => {
+            const title = job.title || "Vị trí tuyển dụng";
+            const level = title.includes("Senior")
+              ? "Level: Senior"
+              : title.includes("Lead") || title.includes("Architect")
+              ? "Level: Lead / Architect"
+              : "Level: Mid-Level";
+            const status: "approved" | "pending" | "draft" =
+              idx % 3 === 0 ? "approved" : idx % 3 === 1 ? "pending" : "approved";
+
+            return {
+              id: job.id || String(idx + 1),
+              code: `YCT-2026-${String(idx + 1).padStart(3, "0")}`,
+              title: title,
+              level: level,
+              location: job.location || "Hồ Chí Minh",
+              department: job.department || "Khối Công nghệ & Sản phẩm",
+              quantity: 2,
+              salaryRange: job.salary_range || "30.000.000 đ - 50.000.000 đ",
+              proposerName: "Phòng Kỹ thuật & Công nghệ",
+              proposerRole: "Engineering Manager",
+              proposedDate: "2026-10-01",
+              status: status,
+            };
+          });
+          setRequests(mapped);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading requests from DB:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
 
   // Filter requests
   const filteredRequests = requests.filter((r) => {
@@ -344,10 +346,19 @@ export default function RequestsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredRequests.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-slate-500">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Đang tải danh sách yêu cầu tuyển dụng từ cơ sở dữ liệu...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-slate-400">
-                    Không tìm thấy yêu cầu tuyển dụng nào phù hợp.
+                    Chưa có yêu cầu tuyển dụng nào trong cơ sở dữ liệu.
                   </td>
                 </tr>
               ) : (

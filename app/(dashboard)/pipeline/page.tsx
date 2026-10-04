@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Download,
@@ -47,89 +47,9 @@ interface PipelineCandidate {
   aiReasoning: string;
 }
 
-const initialPipelineCandidates: PipelineCandidate[] = [
-  {
-    id: "1",
-    name: "Nguyễn Văn An",
-    initial: "N",
-    currentRole: "Senior Backend Developer",
-    appliedJobTitle: "Senior Backend Developer (.NET)",
-    department: "Product Development",
-    matchScore: 94,
-    stage: "interview",
-    stageLabel: "Technical Interview",
-    source: "Career Website",
-    appliedDate: "2026-09-22",
-    recruiter: "Nguyễn Thu Trang",
-    statusNote: "Phỏng vấn",
-    noteColor: "green",
-    strongPoints: [
-      "8+ năm kinh nghiệm thực chiến .NET Core / C#",
-      "Kinh nghiệm xử lý Message Queue với Apache Kafka tải lớn",
-      "Kiến trúc Clean Architecture & Microservices vững vàng",
-    ],
-    missingEvidence: [
-      "Chưa có chứng chỉ Cloud AWS chính thức (nhưng có kinh nghiệm thực tế)",
-    ],
-    aiReasoning:
-      "Ứng viên đạt 94/100 điểm tương thích. Kinh nghiệm kỹ thuật vượt trội, hồ sơ rất phù hợp với yêu cầu vị trí Senior Backend của khối Product.",
-  },
-  {
-    id: "2",
-    name: "Trần Thị Mai",
-    initial: "T",
-    currentRole: "Lead Frontend Engineer",
-    appliedJobTitle: "Senior Frontend Engineer (React/TypeScript)",
-    department: "Product Development",
-    matchScore: 90,
-    stage: "screening",
-    stageLabel: "HR Screening",
-    source: "LinkedIn",
-    appliedDate: "2026-09-26",
-    recruiter: "Nguyễn Thu Trang",
-    statusNote: "Đang xét duyệt",
-    noteColor: "green",
-    strongPoints: [
-      "6+ năm kinh nghiệm React, TypeScript, Next.js",
-      "Thành thạo tối ưu Web Performance và Design System Tailwind CSS",
-      "Kinh nghiệm Lead nhóm Frontend 5 thành viên",
-    ],
-    missingEvidence: [
-      "Kinh nghiệm kiểm thử tự động E2E với Cypress còn ở mức cơ bản",
-    ],
-    aiReasoning:
-      "Ứng viên đạt 90/100 điểm tương thích. Năng lực Frontend chuyên sâu, phong cách code chuẩn mực và khả năng dẫn dắt kỹ thuật tốt.",
-  },
-  {
-    id: "3",
-    name: "Hoàng Minh Tuấn",
-    initial: "H",
-    currentRole: "Mid Backend Developer",
-    appliedJobTitle: "Senior Backend Developer (.NET)",
-    department: "Product Development",
-    matchScore: 71,
-    stage: "talent_pool",
-    stageLabel: "Talent Pool",
-    source: "Referral",
-    appliedDate: "2026-09-24",
-    recruiter: "Nguyễn Thu Trang",
-    statusNote: "Lưu trữ hồ sơ",
-    noteColor: "slate",
-    strongPoints: [
-      "4 năm kinh nghiệm .NET Core, SQL Server, RabbitMQ",
-      "Nhiệt huyết, tư duy thuật toán và lập trình tốt",
-    ],
-    missingEvidence: [
-      "Chưa đủ số năm kinh nghiệm yêu cầu cho vị trí Senior (cần 5+ năm)",
-      "Kinh nghiệm hệ thống phân tán chịu tải Kafka còn hạn chế",
-    ],
-    aiReasoning:
-      "Điểm tương thích 71%. Chưa đạt chuẩn Senior hiện tại nhưng tiềm năng phát triển lớn. Đã chuyển vào Kho nhân tài (Talent Pool) để ưu tiên kết nối cho các đợt tuyển Mid-level.",
-  },
-];
-
 export default function PipelinePage() {
-  const [candidates, setCandidates] = useState<PipelineCandidate[]>(initialPipelineCandidates);
+  const [candidates, setCandidates] = useState<PipelineCandidate[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
     "all" | "screening" | "interview" | "offer" | "hired" | "talent_pool"
   >("all");
@@ -146,6 +66,103 @@ export default function PipelinePage() {
   const [formName, setFormName] = useState("");
   const [formJob, setFormJob] = useState("Senior Backend Developer (.NET)");
   const [formSource, setFormSource] = useState("Career Website");
+
+  const fetchPipelineCandidates = async () => {
+    setLoading(true);
+    try {
+      let token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      let res = await fetch("/api/v1/candidates", { headers });
+      if (res.status === 401) {
+        const loginRes = await fetch("/api/v1/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "demo.hr@recruiting.vn", password: "Demo123456@" }),
+        });
+        if (loginRes.ok) {
+          const authData = await loginRes.json();
+          if (authData.access_token) {
+            localStorage.setItem("auth_token", authData.access_token);
+            headers["Authorization"] = `Bearer ${authData.access_token}`;
+            res = await fetch("/api/v1/candidates", { headers });
+          }
+        }
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const list: PipelineCandidate[] = [];
+          data.forEach((c: any) => {
+            const apps = c.applications && c.applications.length > 0 ? c.applications : [null];
+            apps.forEach((app: any, aIdx: number) => {
+              const currentRole = c.parsed_data?.experience?.[0]?.position || "Kỹ sư chuyên môn";
+              const rawStatus = (app?.status || "screening").toLowerCase();
+              let stage: PipelineCandidate["stage"] = "screening";
+              let stageLabel = "Sơ loại hồ sơ";
+              let statusNote = "Đang xét duyệt";
+              let noteColor: "green" | "slate" = "green";
+
+              if (rawStatus === "interview" || rawStatus === "interviewed" || rawStatus === "interview_invited") {
+                stage = "interview";
+                stageLabel = "Phỏng vấn";
+                statusNote = "Đã lên lịch PV";
+              } else if (rawStatus === "offer" || rawStatus === "offered") {
+                stage = "offer";
+                stageLabel = "Đề nghị việc làm";
+                statusNote = "Chờ phản hồi";
+              } else if (rawStatus === "hired") {
+                stage = "hired";
+                stageLabel = "Đã tuyển dụng";
+                statusNote = "Hoàn tất";
+              } else if (rawStatus === "rejected" || rawStatus === "talent_pool" || !app) {
+                stage = "talent_pool";
+                stageLabel = "Talent Pool";
+                statusNote = "Lưu trữ hồ sơ";
+                noteColor = "slate";
+              }
+
+              const matchScore = Math.round(app?.match_score || 85);
+              const strengths = app?.score_breakdown?.strengths || ["Kinh nghiệm phù hợp với yêu cầu tuyển dụng"];
+              const gaps = app?.score_breakdown?.gaps || ["Cần đánh giá thêm trong buổi phỏng vấn"];
+              const recommendation = app?.score_breakdown?.recommendation || `Độ tương thích hồ sơ ${matchScore}%.`;
+
+              list.push({
+                id: app?.id || `${c.id}-${aIdx}`,
+                name: c.full_name || "Ứng viên",
+                initial: (c.full_name || "U").charAt(0).toUpperCase(),
+                currentRole: currentRole,
+                appliedJobTitle: app?.job_title || "Vị trí tuyển dụng",
+                department: "Khối Công nghệ & Sản phẩm",
+                matchScore: matchScore,
+                stage: stage,
+                stageLabel: stageLabel,
+                source: c.source === "direct_apply" ? "Website Tuyển dụng" : c.source || "Trực tiếp",
+                appliedDate: (app?.created_at || c.created_at || "2026-10-02").slice(0, 10),
+                recruiter: "Phòng Nhân sự",
+                statusNote: statusNote,
+                noteColor: noteColor,
+                strongPoints: strengths,
+                missingEvidence: gaps,
+                aiReasoning: recommendation,
+              });
+            });
+          });
+          setCandidates(list);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading pipeline from DB:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPipelineCandidates();
+  }, []);
 
   const filteredCandidates = candidates.filter((c) => {
     if (activeTab === "screening" && c.stage !== "screening") return false;
@@ -464,7 +481,16 @@ export default function PipelinePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCandidates.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-12 text-slate-500">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span>Đang tải danh sách hồ sơ từ cơ sở dữ liệu...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredCandidates.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="text-center py-8 text-slate-400">
                       Không tìm thấy hồ sơ nào trong quy trình tuyển dụng này.

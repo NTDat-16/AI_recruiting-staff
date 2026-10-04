@@ -64,45 +64,9 @@ interface AnalyticsData {
   departments_summary: DepartmentSummary[];
 }
 
-const DEFAULT_ANALYTICS: AnalyticsData = {
-  total_candidates: 40,
-  active_jobs: 12,
-  completed_interviews: 11,
-  avg_match_score: 86.8,
-  avg_time_to_hire_days: 18.5,
-  offer_acceptance_rate: 87.5,
-  funnel_stages: [
-    { stage: "Ứng tuyển (Applied)", count: 40, percentage: 100 },
-    { stage: "Sơ loại AI (Screening)", count: 28, percentage: 70.0 },
-    { stage: "Phỏng vấn (Interview)", count: 18, percentage: 45.0 },
-    { stage: "Đề nghị (Offer)", count: 9, percentage: 22.5 },
-    { stage: "Đã tuyển (Hired)", count: 7, percentage: 17.5 },
-  ],
-  source_distribution: [
-    { source: "Website Tuyển dụng (Careers)", count: 14, percentage: 35.0 },
-    { source: "LinkedIn Talent Hub", count: 12, percentage: 30.0 },
-    { source: "Nội bộ giới thiệu (Referral)", count: 8, percentage: 20.0 },
-    { source: "TopCV & VietnamWorks", count: 6, percentage: 15.0 },
-  ],
-  match_distribution: [
-    { range: "90% - 100% (Xuất sắc)", count: 15, percentage: 37.5, color: "emerald" },
-    { range: "80% - 89% (Rất tốt)", count: 16, percentage: 40.0, color: "blue" },
-    { range: "70% - 79% (Tiềm năng)", count: 6, percentage: 15.0, color: "amber" },
-    { range: "< 70% (Chưa phù hợp)", count: 3, percentage: 7.5, color: "rose" },
-  ],
-  departments_summary: [
-    { name: "Engineering & AI", jobs: 5, candidates: 18, hired: 3, fill_rate: 60.0 },
-    { name: "Product & Design", jobs: 2, candidates: 7, hired: 1, fill_rate: 50.0 },
-    { name: "Data & Analytics", jobs: 2, candidates: 6, hired: 1, fill_rate: 50.0 },
-    { name: "Marketing & Growth", jobs: 1, candidates: 4, hired: 1, fill_rate: 100.0 },
-    { name: "Sales & B2B", jobs: 1, candidates: 3, hired: 1, fill_rate: 100.0 },
-    { name: "HR & Operations", jobs: 1, candidates: 2, hired: 0, fill_rate: 0.0 },
-  ],
-};
-
 export default function ReportsDashboardPage() {
-  const [data, setData] = useState<AnalyticsData>(DEFAULT_ANALYTICS);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("30_days");
   const [selectedDept, setSelectedDept] = useState("all");
 
@@ -114,12 +78,12 @@ export default function ReportsDashboardPage() {
         const json = await res.json();
         if (json.kpi) {
           setData({
-            total_candidates: json.kpi.total_candidates ?? 40,
-            active_jobs: json.kpi.total_jobs ?? 12,
-            completed_interviews: json.kpi.total_interviews ?? 11,
-            avg_match_score: json.kpi.average_match_score ?? 86.8,
-            avg_time_to_hire_days: json.kpi.time_to_hire_days ?? 18.5,
-            offer_acceptance_rate: parseFloat(json.kpi.offer_acceptance_rate) || 87.5,
+            total_candidates: json.kpi.total_candidates ?? 0,
+            active_jobs: json.kpi.total_jobs ?? 0,
+            completed_interviews: json.kpi.total_interviews ?? 0,
+            avg_match_score: json.kpi.average_match_score ?? 0,
+            avg_time_to_hire_days: json.kpi.time_to_hire_days ?? 0,
+            offer_acceptance_rate: parseFloat(json.kpi.offer_acceptance_rate) || 0,
             funnel_stages: (json.funnel_stages || []).map((s: { stage: string; count: number; conversion_rate?: number }) => ({
               stage: s.stage,
               count: s.count,
@@ -144,12 +108,10 @@ export default function ReportsDashboardPage() {
               fill_rate: d.completion_rate ?? 0,
             })),
           });
-        } else {
-          setData(json);
         }
       }
     } catch {
-      // Keep robust defaults
+      // Failed to load
     } finally {
       setLoading(false);
     }
@@ -160,6 +122,7 @@ export default function ReportsDashboardPage() {
   }, []);
 
   const handleExportCSV = () => {
+    if (!data) return;
     const csvRows = [
       ["BÁO CÁO THỐNG KÊ TUYỂN DỤNG & ATS - AI TALENT SUITE"],
       [`Thời điểm xuất: ${new Date().toLocaleString("vi-VN")}`],
@@ -197,6 +160,29 @@ export default function ReportsDashboardPage() {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (loading && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-slate-500 space-y-3">
+        <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+        <p className="text-sm font-medium">Đang tải dữ liệu báo cáo thống kê từ cơ sở dữ liệu...</p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-slate-500 space-y-3">
+        <p className="text-sm font-medium">Không thể tải dữ liệu báo cáo từ cơ sở dữ liệu.</p>
+        <button
+          onClick={fetchReports}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+        >
+          Tải lại dữ liệu
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

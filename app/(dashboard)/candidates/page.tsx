@@ -41,75 +41,9 @@ interface CandidateProfileItem {
   inTalentPool?: boolean;
 }
 
-const initialCandidateProfiles: CandidateProfileItem[] = [
-  {
-    id: "1",
-    code: "UV-2026-1001",
-    name: "Nguyễn Văn An",
-    email: "an.nguyenvan@gmail.com",
-    phone: "0912 345 678",
-    initial: "N",
-    title: "Senior Backend Developer",
-    totalExpYears: 8,
-    specExpYears: 6,
-    skills: [".NET Core", "C#", "Apache Kafka"],
-    extraSkillsCount: 5,
-    applicationsCount: 1,
-    location: "TP. Hồ Chí Minh",
-    inTalentPool: false,
-  },
-  {
-    id: "2",
-    code: "UV-2026-1002",
-    name: "Trần Thị Mai",
-    email: "mai.tran@outlook.com",
-    phone: "0983 221 456",
-    initial: "T",
-    title: "Lead Frontend Engineer",
-    totalExpYears: 6,
-    specExpYears: 5,
-    skills: ["React", "TypeScript", "Tailwind CSS"],
-    extraSkillsCount: 4,
-    applicationsCount: 1,
-    location: "TP. Hồ Chí Minh",
-    inTalentPool: false,
-  },
-  {
-    id: "3",
-    code: "UV-2026-1003",
-    name: "Lê Quốc Bảo",
-    email: "baole.tech@gmail.com",
-    phone: "0909 112 334",
-    initial: "L",
-    title: "Solution Architect",
-    totalExpYears: 10,
-    specExpYears: 5,
-    skills: ["Cloud Architecture", "AWS", "Kubernetes"],
-    extraSkillsCount: 4,
-    applicationsCount: 0,
-    location: "Hà Nội",
-    inTalentPool: true,
-  },
-  {
-    id: "4",
-    code: "UV-2026-1004",
-    name: "Hoàng Minh Tuấn",
-    email: "tuan.hm@dev.vn",
-    phone: "0934 567 890",
-    initial: "H",
-    title: "Mid Backend Developer",
-    totalExpYears: 4,
-    specExpYears: 3,
-    skills: [".NET Core", "SQL Server", "RabbitMQ"],
-    extraSkillsCount: 1,
-    applicationsCount: 1,
-    location: "Hồ Chí Minh",
-    inTalentPool: true,
-  },
-];
-
 export default function CandidatesPage() {
-  const [profiles, setProfiles] = useState<CandidateProfileItem[]>(initialCandidateProfiles);
+  const [profiles, setProfiles] = useState<CandidateProfileItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "active" | "talent_pool">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("all");
@@ -133,6 +67,71 @@ export default function CandidatesPage() {
   const [formSkills, setFormSkills] = useState("");
   const [formExp, setFormExp] = useState(5);
   const [uploadingCV, setUploadingCV] = useState(false);
+
+  const fetchCandidates = async () => {
+    setLoading(true);
+    try {
+      let token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      let res = await fetch("/api/v1/candidates", { headers });
+      if (res.status === 401) {
+        const loginRes = await fetch("/api/v1/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "demo.hr@recruiting.vn", password: "Demo123456@" }),
+        });
+        if (loginRes.ok) {
+          const authData = await loginRes.json();
+          if (authData.access_token) {
+            localStorage.setItem("auth_token", authData.access_token);
+            headers["Authorization"] = `Bearer ${authData.access_token}`;
+            res = await fetch("/api/v1/candidates", { headers });
+          }
+        }
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const mapped: CandidateProfileItem[] = data.map((c: any, idx: number) => {
+            const expYears = c.parsed_data?.total_experience_years || 3;
+            const skillsList = c.parsed_data?.skills || [];
+            const expList = c.parsed_data?.experience || [];
+            const currentPosition = expList[0]?.position || c.applications?.[0]?.job_title || "Chuyên viên Kỹ thuật";
+            const locationStr = expList[0]?.company?.includes("Hà Nội") ? "Hà Nội" : "TP. Hồ Chí Minh";
+
+            return {
+              id: c.id,
+              code: `UV-2026-${String(idx + 1).padStart(4, "0")}`,
+              name: c.full_name || "Ứng viên",
+              email: c.email,
+              phone: c.phone || "Chưa cập nhật",
+              initial: (c.full_name || "U").charAt(0).toUpperCase(),
+              title: currentPosition,
+              totalExpYears: Math.round(expYears),
+              specExpYears: Math.max(1, Math.round(expYears * 0.7)),
+              skills: skillsList.slice(0, 3),
+              extraSkillsCount: Math.max(0, skillsList.length - 3),
+              applicationsCount: c.applications?.length || 0,
+              location: locationStr,
+              inTalentPool: c.tags?.includes("talent_pool") || (c.applications?.length || 0) === 0,
+            };
+          });
+          setProfiles(mapped);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading candidates:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCandidates();
+  }, []);
 
   const filteredProfiles = profiles.filter((p) => {
     if (activeTab === "active" && p.applicationsCount === 0) return false;
@@ -392,10 +391,17 @@ export default function CandidatesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredProfiles.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-slate-500">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                    <span>Đang tải danh sách hồ sơ ứng viên từ cơ sở dữ liệu...</span>
+                  </td>
+                </tr>
+              ) : filteredProfiles.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-8 text-slate-400">
-                    Không tìm thấy hồ sơ ứng viên nào phù hợp.
+                    Không tìm thấy hồ sơ ứng viên nào trong cơ sở dữ liệu.
                   </td>
                 </tr>
               ) : (

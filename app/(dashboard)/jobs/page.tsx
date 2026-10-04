@@ -36,56 +36,9 @@ interface JobPostingItem {
   status: "published" | "draft" | "closed";
 }
 
-const initialJobs: JobPostingItem[] = [
-  {
-    id: "1",
-    code: "JOB-NET-01",
-    title: "Senior Backend Developer (.NET)",
-    type: "Hybrid",
-    location: "Hồ Chí Minh",
-    techStack: ".NET 8, C#, Apache Kafka",
-    department: "Product Development",
-    targetCount: 3,
-    applicantsCount: 8,
-    salaryRange: "35.000.000 - 50.000.000 VNĐ",
-    recruiterName: "Nguyễn Thu Trang",
-    deadline: "2026-12-15",
-    status: "published",
-  },
-  {
-    id: "2",
-    code: "JOB-FE-02",
-    title: "Senior Frontend Engineer (React/TypeScript)",
-    type: "Hybrid",
-    location: "Hồ Chí Minh",
-    techStack: "React, TypeScript, Tailwind CSS",
-    department: "Product Development",
-    targetCount: 2,
-    applicantsCount: 5,
-    salaryRange: "32.000.000 - 45.000.000 VNĐ",
-    recruiterName: "Nguyễn Thu Trang",
-    deadline: "2026-11-30",
-    status: "published",
-  },
-  {
-    id: "3",
-    code: "JOB-AI-03",
-    title: "AI / Machine Learning Engineer",
-    type: "Full-time",
-    location: "Hà Nội",
-    techStack: "Python, Gemini API, PyTorch",
-    department: "AI Innovation Hub",
-    targetCount: 2,
-    applicantsCount: 4,
-    salaryRange: "40.000.000 - 60.000.000 VNĐ",
-    recruiterName: "Đỗ Hải Yến",
-    deadline: "2026-12-31",
-    status: "published",
-  },
-];
-
 export default function JobsDashboardPage() {
-  const [jobs, setJobs] = useState<JobPostingItem[]>(initialJobs);
+  const [jobs, setJobs] = useState<JobPostingItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "published" | "draft" | "closed">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
@@ -106,41 +59,60 @@ export default function JobsDashboardPage() {
   const [formRequirements, setFormRequirements] = useState("");
   const [generatingAI, setGeneratingAI] = useState(false);
 
-  // Try to load any API jobs to enrich
+  // Load real jobs from Database
   useEffect(() => {
     const fetchApiJobs = async () => {
+      setLoading(true);
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-        const headers: Record<string, string> = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
+        let token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+        let apiData: any[] = [];
 
-        const res = await fetch("/api/v1/jobs", { headers });
-        if (res.ok) {
-          const apiData = await res.json();
-          if (Array.isArray(apiData) && apiData.length > 0) {
-            const mapped: JobPostingItem[] = apiData.map((j: any, idx: number) => ({
-              id: j.id || String(idx),
-              code: `JOB-${j.title?.slice(0, 3).toUpperCase() || "TECH"}-0${idx + 1}`,
-              title: j.title || "Software Engineer",
-              type: "Hybrid",
-              location: j.location || "Hồ Chí Minh",
-              techStack: j.requirements?.slice(0, 40) || ".NET, React, SQL",
-              department: j.department || "Product Development",
-              targetCount: 2,
-              applicantsCount: j.applications_count || 4,
-              salaryRange: j.salary_range || "30.000.000 - 45.000.000 VNĐ",
-              recruiterName: "Nguyễn Thu Trang",
-              deadline: "2026-12-31",
-              status: j.status === "closed" ? "closed" : j.status === "draft" ? "draft" : "published",
-            }));
-            // Merge with default 3 if count < 3
-            if (mapped.length >= 3) {
-              setJobs(mapped);
+        // Try authenticated jobs endpoint first if token exists
+        if (token) {
+          try {
+            const res = await fetch("/api/v1/jobs", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+              apiData = await res.json();
             }
+          } catch {}
+        }
+
+        // Fallback or public endpoint to ensure all public jobs in DB are displayed
+        if (!apiData || apiData.length === 0) {
+          const pubRes = await fetch("/api/v1/jobs/public");
+          if (pubRes.ok) {
+            apiData = await pubRes.json();
           }
         }
+
+        if (Array.isArray(apiData) && apiData.length > 0) {
+          const mapped: JobPostingItem[] = apiData.map((j: any, idx: number) => ({
+            id: j.id || String(idx),
+            code: `JOB-${j.title?.slice(0, 3).toUpperCase() || "TECH"}-${String(idx + 1).padStart(2, "0")}`,
+            title: j.title || "Software Engineer",
+            type: j.location?.toLowerCase().includes("remote")
+              ? "Remote"
+              : j.location?.toLowerCase().includes("hybrid")
+              ? "Hybrid"
+              : "Full-time",
+            location: j.location || "Hồ Chí Minh",
+            techStack: j.requirements?.slice(0, 45) || ".NET, React, SQL",
+            department: j.department || "Khối Công nghệ & Sản phẩm",
+            targetCount: j.target_hires || 2,
+            applicantsCount: j.applications_count ?? 4,
+            salaryRange: j.salary_range || "30.000.000 - 50.000.000 VNĐ",
+            recruiterName: "Phòng Nhân sự (HR)",
+            deadline: j.deadline?.slice(0, 10) || "2026-12-31",
+            status: j.status === "closed" ? "closed" : j.status === "draft" ? "draft" : "published",
+          }));
+          setJobs(mapped);
+        }
       } catch (e) {
-        console.error(e);
+        console.error("Error loading jobs from DB:", e);
+      } finally {
+        setLoading(false);
       }
     };
     fetchApiJobs();
@@ -403,10 +375,17 @@ export default function JobsDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredJobs.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="text-center py-12 text-slate-500">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                    <span>Đang tải danh sách tin tuyển dụng từ cơ sở dữ liệu...</span>
+                  </td>
+                </tr>
+              ) : filteredJobs.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-8 text-slate-400">
-                    Không tìm thấy tin tuyển dụng nào phù hợp.
+                    Chưa có tin tuyển dụng nào trong cơ sở dữ liệu.
                   </td>
                 </tr>
               ) : (
