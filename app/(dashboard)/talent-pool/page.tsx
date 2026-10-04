@@ -211,7 +211,9 @@ export default function TalentPoolPage() {
                       <CandidateAvatar src={cand.avatar_url} name={cand.full_name} size="lg" />
                       <div>
                         <h3 className="font-bold text-sm text-slate-900 leading-snug">
-                          {cand.full_name}
+                          <Link href={`/candidates/${cand.id}`} className="hover:text-indigo-600 transition-colors">
+                            {cand.full_name}
+                          </Link>
                         </h3>
                         <p className="text-[11px] text-slate-500">📧 {cand.email}</p>
                         {cand.phone && <p className="text-[11px] text-slate-400">📞 {cand.phone}</p>}

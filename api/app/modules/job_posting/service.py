@@ -61,6 +61,9 @@ class JobPostingService:
     async def get_job_by_slug(db: AsyncSession, slug: str) -> JobPosting:
         result = await db.execute(select(JobPosting).where(JobPosting.slug == slug))
         job = result.scalars().first()
+        if not job:
+            result_id = await db.execute(select(JobPosting).where(JobPosting.id == slug))
+            job = result_id.scalars().first()
         if not job or job.status != "published":
             raise NotFoundException("Public JobPosting", slug)
         return job

@@ -236,6 +236,44 @@ class CandidateService:
             query = query.where(Candidate.company_id == company_id)
         result = await db.execute(query)
         candidate = result.scalars().first()
+
+        # Fallback 1: If filtered by company_id and not found, try without company_id
+        if not candidate and company_id:
+            fallback_query = (
+                select(Candidate)
+                .options(selectinload(Candidate.applications).selectinload(Application.job_posting))
+                .where(Candidate.id == candidate_id)
+            )
+            res_fb = await db.execute(fallback_query)
+            candidate = res_fb.scalars().first()
+
+        # Fallback 2: Check if candidate_id is an Application.id
+        if not candidate:
+            app_result = await db.execute(
+                select(Application).where(Application.id == candidate_id)
+            )
+            app = app_result.scalars().first()
+            if app and app.candidate_id:
+                cand_query = (
+                    select(Candidate)
+                    .options(selectinload(Candidate.applications).selectinload(Application.job_posting))
+                    .where(Candidate.id == app.candidate_id)
+                )
+                res_cand = await db.execute(cand_query)
+                candidate = res_cand.scalars().first()
+
+        # Fallback 3: If candidate_id has suffix like "-0" or "-1", strip it
+        if not candidate and "-" in candidate_id:
+            parts = candidate_id.rsplit("-", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                cand_query = (
+                    select(Candidate)
+                    .options(selectinload(Candidate.applications).selectinload(Application.job_posting))
+                    .where(Candidate.id == parts[0])
+                )
+                res_cand = await db.execute(cand_query)
+                candidate = res_cand.scalars().first()
+
         if not candidate:
             raise NotFoundException("Candidate", candidate_id)
         return candidate

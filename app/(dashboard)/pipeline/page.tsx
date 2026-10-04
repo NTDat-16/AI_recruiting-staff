@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 
 interface PipelineCandidate {
   id: string;
+  candidateId: string;
   name: string;
   initial: string;
   currentRole: string;
@@ -131,6 +132,7 @@ export default function PipelinePage() {
 
               list.push({
                 id: app?.id || `${c.id}-${aIdx}`,
+                candidateId: c.id,
                 name: c.full_name || "Ứng viên",
                 initial: (c.full_name || "U").charAt(0).toUpperCase(),
                 currentRole: currentRole,
@@ -239,6 +241,7 @@ export default function PipelinePage() {
     e.preventDefault();
     const newCand: PipelineCandidate = {
       id: String(Date.now()),
+      candidateId: String(Date.now()),
       name: formName,
       initial: formName.trim().charAt(0).toUpperCase() || "C",
       currentRole: "Software Engineer",
@@ -509,11 +512,19 @@ export default function PipelinePage() {
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                          <Link
+                            href={`/candidates/${c.candidateId || c.id}`}
+                            className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs hover:bg-blue-700 transition-colors"
+                          >
                             {c.initial}
-                          </div>
+                          </Link>
                           <div>
-                            <p className="font-semibold text-slate-900">{c.name}</p>
+                            <Link
+                              href={`/candidates/${c.candidateId || c.id}`}
+                              className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                            >
+                              {c.name}
+                            </Link>
                             <p className="text-[11px] text-slate-500 mt-0.5">{c.currentRole}</p>
                           </div>
                         </div>
@@ -553,7 +564,7 @@ export default function PipelinePage() {
                       <td className="px-4 py-3.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end space-x-1.5">
                           <Link
-                            href={`/candidates/${c.id}`}
+                            href={`/candidates/${c.candidateId || c.id}`}
                             className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                             title="Xem chi tiết hồ sơ"
                           >
@@ -643,7 +654,12 @@ export default function PipelinePage() {
                       className="bg-white p-3 rounded-lg border border-slate-200/80 shadow-xs space-y-2 hover:border-blue-400 transition-colors"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-900 text-xs">{c.name}</span>
+                        <Link
+                          href={`/candidates/${c.candidateId || c.id}`}
+                          className="font-semibold text-slate-900 text-xs hover:text-blue-600 transition-colors"
+                        >
+                          {c.name}
+                        </Link>
                         <button
                           onClick={() => setSelectedAIModal(c)}
                           className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1"

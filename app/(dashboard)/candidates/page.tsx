@@ -420,12 +420,20 @@ export default function CandidatesPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                        <Link
+                          href={`/candidates/${p.id}`}
+                          className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs hover:bg-blue-700 transition-colors"
+                        >
                           {p.initial}
-                        </div>
+                        </Link>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <span className="font-semibold text-slate-900">{p.name}</span>
+                            <Link
+                              href={`/candidates/${p.id}`}
+                              className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                            >
+                              {p.name}
+                            </Link>
                             {p.inTalentPool && (
                               <span className="px-2 py-0.2 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
                                 Talent Pool
