@@ -35,31 +35,26 @@ const navItems: NavItem[] = [
     name: "Yêu cầu tuyển dụng",
     href: "/requests",
     icon: FileText,
-    badge: 3,
   },
   {
     name: "Tin tuyển & JD",
     href: "/jobs",
     icon: Briefcase,
-    badge: 3,
   },
   {
     name: "Hồ sơ ứng viên",
     href: "/candidates",
     icon: Users,
-    badge: 4,
   },
   {
     name: "Quy trình tuyển dụng",
     href: "/pipeline",
     icon: ListFilter,
-    badge: 8,
   },
   {
     name: "Lịch phỏng vấn & AI",
     href: "/interviews",
     icon: Calendar,
-    badge: 1,
   },
   {
     name: "Talent Pool & Rediscovery",
