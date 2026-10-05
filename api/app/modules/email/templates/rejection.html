@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thông báo kết quả ứng tuyển - {{ company_name }}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f7f9fc; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .header { border-bottom: 2px solid #9ca3af; padding-bottom: 15px; margin-bottom: 20px; }
+    .header h2 { color: #374151; margin: 0; }
+    .content { margin-bottom: 25px; }
+    .footer { font-size: 12px; color: #6b7280; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 15px; margin-top: 25px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>{{ company_name }} - Thông Báo Tuyển Dụng</h2>
+    </div>
+    <div class="content">
+      <p>Kính gửi <strong>{{ candidate_name }}</strong>,</p>
+      <p>Chân thành cảm ơn bạn đã dành thời gian và sự quan tâm đến cơ hội nghề nghiệp cho vị trí <strong>{{ job_title }}</strong> tại {{ company_name }}.</p>
+      <p>Hội đồng tuyển dụng đã xem xét rất kỹ lưỡng hồ sơ và kết quả của bạn. Mặc dù đánh giá cao năng lực và kinh nghiệm của bạn, tuy nhiên tại thời điểm hiện tại, chúng tôi nhận thấy các yêu cầu công việc có một số điểm chưa hoàn toàn tương thích nhất với giai đoạn hiện nay của dự án.</p>
+      <p>Hồ sơ của bạn đã được lưu trữ trong <strong>Mạng lưới nhân tài (Talent Pool)</strong> của chúng tôi. Ngay khi có cơ hội phù hợp hơn trong tương lai, bộ phận tuyển dụng sẽ chủ động liên hệ lại với bạn.</p>
+      {% if custom_message %}
+      <p>{{ custom_message }}</p>
+      {% endif %}
+      <p>Chúc bạn luôn gặt hái được nhiều thành công và may mắn trên chặng đường sự nghiệp sắp tới!</p>
+    </div>
+    <div class="footer">
+      <p>Trân trọng,<br>Ban Tuyển dụng {{ company_name }}</p>
+    </div>
+  </div>
+</body>
+</html>
