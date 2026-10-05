@@ -106,3 +106,19 @@ class CandidateTrackItem(BaseModel):
 
 class RediscoverCandidateRequest(BaseModel):
     job_id: str
+
+
+class AnalyticsCopilotRequest(BaseModel):
+    query: str
+    time_range: Optional[str] = "30_days"
+    department: Optional[str] = "all"
+
+
+class AnalyticsCopilotResponse(BaseModel):
+    query: str
+    answer: str
+    root_cause_analysis: Optional[str] = None
+    actionable_recommendations: Optional[List[str]] = None
+    confidence_score: float = 0.96
+    grounded_entities: Optional[List[str]] = None
+    timestamp: str

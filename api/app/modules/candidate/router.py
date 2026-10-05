@@ -12,6 +12,8 @@ from app.modules.candidate.schemas import (
     CareerChatRequest,
     CareerChatResponse,
     RediscoverCandidateRequest,
+    AnalyticsCopilotRequest,
+    AnalyticsCopilotResponse,
 )
 from app.modules.candidate.service import CandidateService
 from app.shared.permissions import get_current_token_payload, get_optional_token_payload, RequireRoles, UserRole, TokenData
@@ -116,6 +118,23 @@ async def get_detailed_analytics_report(
     """Báo cáo phân tích tuyển dụng nâng cao (Funnel, Time-to-Hire, Sources, Departments, AI Score Distribution)."""
     company_id = current_user.company_id if current_user else None
     return await CandidateService.get_detailed_analytics_report(db, company_id=company_id)
+
+
+@router.post("/analytics/copilot", response_model=AnalyticsCopilotResponse)
+async def run_analytics_copilot(
+    payload: AnalyticsCopilotRequest,
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """AI Analytics Copilot: Truy vấn dữ liệu tuyển dụng & Root Cause Analysis."""
+    company_id = current_user.company_id if current_user else None
+    return await CandidateService.analytics_copilot(
+        db,
+        query=payload.query,
+        time_range=payload.time_range or "30_days",
+        department=payload.department or "all",
+        company_id=company_id,
+    )
 
 
 

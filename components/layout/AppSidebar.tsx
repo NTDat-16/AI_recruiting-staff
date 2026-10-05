@@ -236,14 +236,14 @@ export const AppSidebar: React.FC = () => {
               title={collapsed ? item.name : undefined}
               className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group ${
                 isActive
-                  ? "bg-blue-50 text-blue-600 font-semibold"
+                  ? "bg-indigo-50 text-indigo-700 font-semibold shadow-2xs"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
               <div className="flex items-center space-x-3 overflow-hidden">
                 <Icon
                   className={`w-4 h-4 shrink-0 transition-colors ${
-                    isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+                    isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
                   }`}
                 />
                 {!collapsed && (
@@ -254,14 +254,14 @@ export const AppSidebar: React.FC = () => {
               {!collapsed && badgeValue !== undefined && badgeValue !== null && (
                 <div>
                   {item.badgeType === "ai" ? (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-600 text-white shadow-xs">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs">
                       {badgeValue}
                     </span>
                   ) : (
                     <span
                       className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-semibold ${
                         isActive
-                          ? "bg-blue-600 text-white"
+                          ? "bg-indigo-600 text-white"
                           : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
                       }`}
                     >
