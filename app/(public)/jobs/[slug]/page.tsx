@@ -1,80 +1,168 @@
-"use client";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
+import JobDetailClient from "./JobDetailClient";
 
-import React, { useEffect, useState, use } from "react";
-import Link from "next/link";
-import { JobPosting } from "@/types";
-import { Card, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+// 1. Cấu hình ISR: Tự động revalidate sau 1 giờ hoặc on-demand qua webhook
+export const revalidate = 3600;
 
-export default function JobDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  const resolvedParams = use(params);
-  const [job, setJob] = useState<JobPosting | null>(null);
-  const [loading, setLoading] = useState(true);
+const getInternalApiUrl = () => {
+  return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+};
 
-  useEffect(() => {
-    fetch(`/api/v1/jobs/public/${resolvedParams.slug}`)
-      .then((res) => res.json())
-      .then((data) => setJob(data))
-      .catch((e) => console.error(e))
-      .finally(() => setLoading(false));
-  }, [resolvedParams.slug]);
+// 2. Pre-generate danh sách slug các tin tuyển dụng lúc build (ISR)
+export async function generateStaticParams() {
+  const apiUrl = getInternalApiUrl();
+  try {
+    const res = await fetch(`${apiUrl}/api/v1/jobs/public`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const jobs = await res.json();
+    if (Array.isArray(jobs)) {
+      return jobs.map((j: any) => ({ slug: j.slug }));
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
 
-  if (loading) {
-    return <div className="text-center py-12 text-slate-500">Đang tải thông tin vị trí...</div>;
+// 3. Tự động sinh thẻ Meta OpenGraph & Twitter Cards (Chuẩn xem trước như Shopee khi chia sẻ link)
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const apiUrl = getInternalApiUrl();
+
+  try {
+    const res = await fetch(`${apiUrl}/api/v1/jobs/public/${slug}`, {
+      next: { revalidate: 3600, tags: [`job-${slug}`] },
+    });
+
+    if (!res.ok) {
+      return {
+        title: "Cơ hội việc làm - AI Talent Suite",
+        description: "Khám phá các vị trí tuyển dụng hấp dẫn tại AI Talent Suite.",
+      };
+    }
+
+    const job = await res.json();
+    const title = `${job.title} — Lương: ${job.salary_range || "Thỏa thuận"} | AI Talent Suite`;
+    const description = `${job.description?.slice(0, 160) || "Cơ hội việc làm hấp dẫn"}. Địa điểm: ${
+      job.location || "Việt Nam"
+    } | Phòng ban: ${job.department || "Kỹ thuật"}. Nộp CV Quick Apply trong 30 giây!`;
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ai-recruiting-staff.vercel.app";
+    const jobUrl = `${siteUrl}/jobs/${job.slug}`;
+    const ogImage = job.banner_url || `${siteUrl}/favicon.ico`;
+
+    return {
+      title,
+      description,
+      alternates: {
+        canonical: jobUrl,
+      },
+      openGraph: {
+        title,
+        description,
+        url: jobUrl,
+        siteName: "AI Talent Suite — Nền Tảng Tuyển Dụng Thông Minh",
+        locale: "vi_VN",
+        type: "article",
+        images: [
+          {
+            url: ogImage,
+            width: 1200,
+            height: 630,
+            alt: job.title,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [ogImage],
+      },
+    };
+  } catch {
+    return {
+      title: "Cơ hội việc làm - AI Talent Suite",
+    };
+  }
+}
+
+// 4. Server Component nạp dữ liệu và xuất mã nguồn HTML hoàn chỉnh + JSON-LD Google Jobs
+export default async function JobDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const apiUrl = getInternalApiUrl();
+
+  let job = null;
+  try {
+    const res = await fetch(`${apiUrl}/api/v1/jobs/public/${slug}`, {
+      next: { revalidate: 3600, tags: [`job-${slug}`] },
+    });
+    if (res.ok) {
+      job = await res.json();
+    }
+  } catch (error) {
+    console.error("Lỗi khi tải chi tiết JD từ máy chủ:", error);
   }
 
   if (!job) {
-    return (
-      <div className="text-center py-12 text-slate-500">
-        Không tìm thấy thông tin việc làm yêu cầu.
-      </div>
-    );
+    notFound();
   }
 
+  // 5. Cấu trúc Schema JSON-LD chuẩn Google Jobs (Google Search Indexing)
+  const jsonLd = {
+    "@context": "https://schema.org/",
+    "@type": "JobPosting",
+    title: job.title,
+    description: job.description || job.title,
+    datePosted: job.created_at || "2026-10-01",
+    validThrough: job.deadline || undefined,
+    employmentType: "FULL_TIME",
+    hiringOrganization: {
+      "@type": "Organization",
+      name: job.company_name || "AI Talent Suite Enterprise",
+      sameAs: "https://ai-recruiting-staff.vercel.app",
+    },
+    jobLocation: {
+      "@type": "Place",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: job.location || "Hà Nội",
+        addressCountry: "VN",
+      },
+    },
+    baseSalary: job.salary_range
+      ? {
+          "@type": "MonetaryAmount",
+          currency: "VND",
+          value: {
+            "@type": "QuantitativeValue",
+            value: job.salary_range,
+            unitText: "MONTH",
+          },
+        }
+      : undefined,
+  };
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-6 mb-6">
-          <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">{job.title}</h1>
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-600">
-              {job.department && <span>🏢 {job.department}</span>}
-              {job.location && <span>📍 {job.location}</span>}
-              {job.salary_range && <span className="font-semibold text-emerald-600">💰 {job.salary_range}</span>}
-            </div>
-          </div>
-          <Link href={`/apply/${job.id}`}>
-            <Button size="lg" className="w-full sm:w-auto shadow-md">
-              🚀 Nộp Đơn Ứng Tuyển
-            </Button>
-          </Link>
-        </div>
-
-        <div className="space-y-6 text-sm text-slate-700 leading-relaxed">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 mb-2">Mô tả công việc</h3>
-            <div className="whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-100">
-              {job.description}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-base font-bold text-slate-900 mb-2">Yêu cầu ứng viên</h3>
-            <div className="whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-100">
-              {job.requirements}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
-          <Link href="/jobs/public" className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">
-            ← Quay lại danh sách việc làm
-          </Link>
-          <Link href={`/apply/${job.id}`}>
-            <Button size="md">Ứng tuyển vị trí này</Button>
-          </Link>
-        </div>
-      </div>
-    </div>
+    <>
+      {/* Schema JSON-LD cho Google Jobs Bot */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      {/* Giao diện người dùng tương tác */}
+      <JobDetailClient job={job} />
+    </>
   );
 }

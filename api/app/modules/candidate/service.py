@@ -463,15 +463,26 @@ class CandidateService:
         return new_app
 
     @staticmethod
-    async def track_applications(db: AsyncSession, email: str) -> List[Dict[str, Any]]:
-        """Tra cứu trạng thái hồ sơ ứng tuyển công khai theo email ứng viên."""
+    async def track_applications(
+        db: AsyncSession,
+        email: Optional[str] = None,
+        tracking_code: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Tra cứu trạng thái hồ sơ ứng tuyển công khai theo email ứng viên và/hoặc mã hồ sơ."""
         query = (
             select(Application)
             .join(Application.candidate)
             .options(selectinload(Application.job_posting), selectinload(Application.candidate))
-            .where(Candidate.email.ilike(email.strip()))
             .order_by(Application.created_at.desc())
         )
+
+        if email and email.strip():
+            query = query.where(Candidate.email.ilike(email.strip()))
+
+        if tracking_code and tracking_code.strip():
+            clean_code = tracking_code.strip().replace("TRK-", "").replace("trk-", "").strip()
+            query = query.where(Application.id.ilike(f"{clean_code}%"))
+
         result = await db.execute(query)
         apps = result.scalars().all()
 

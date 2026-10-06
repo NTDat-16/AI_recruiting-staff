@@ -54,7 +54,7 @@ export const CareerChatWidget: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/v1/candidates/career-chat", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),

@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.modules.candidate.schemas import (
@@ -18,17 +18,24 @@ from app.modules.candidate.schemas import (
 from app.modules.candidate.service import CandidateService
 from app.shared.permissions import get_current_token_payload, get_optional_token_payload, RequireRoles, UserRole, TokenData
 
+
 router = APIRouter(prefix="/candidates", tags=["Candidates & CVs"])
 
 
 # --- Public Candidate Endpoints (No Auth Needed) ---
 @router.get("/track/status", response_model=List[CandidateTrackItem])
 async def track_application_status(
-    email: str = Query(..., description="Email ứng viên đã dùng nộp đơn"),
+    email: Optional[str] = Query(None, description="Email ứng viên đã dùng nộp đơn"),
+    tracking_code: Optional[str] = Query(None, description="Mã hồ sơ hoặc Application ID"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Tra cứu trạng thái hồ sơ ứng tuyển công khai mà không bắt buộc tạo tài khoản."""
-    return await CandidateService.track_applications(db, email=email)
+    """Tra cứu trạng thái hồ sơ ứng tuyển công khai bằng Email và/hoặc Mã hồ sơ mà không bắt buộc tạo tài khoản."""
+    if not email and not tracking_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vui lòng cung cấp Email hoặc Mã hồ sơ (Tracking Code) để tra cứu tiến độ ứng tuyển."
+        )
+    return await CandidateService.track_applications(db, email=email, tracking_code=tracking_code)
 
 
 @router.post("/career-chat", response_model=CareerChatResponse)
