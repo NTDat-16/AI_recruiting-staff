@@ -689,6 +689,12 @@ HƯỚNG DẪN TRẢ LỜI:
     ) -> Dict[str, Any]:
         from sqlalchemy import func
         from app.modules.interview.models import Interview
+        from app.modules.auth.models import Company
+
+        # Fallback to primary demo company if not specified
+        if not company_id:
+            comp_res = await db.execute(select(Company.id).order_by(Company.created_at.asc()).limit(1))
+            company_id = comp_res.scalar_one_or_none()
 
         # 1. Total Jobs
         job_query = select(func.count(JobPosting.id)).where(JobPosting.status == "published")

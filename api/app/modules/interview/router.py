@@ -11,7 +11,7 @@ from app.modules.interview.schemas import (
     CandidateEmailClassifyResponse,
 )
 from app.modules.interview.service import InterviewService
-from app.shared.permissions import get_current_token_payload, RequireRoles, UserRole, TokenData
+from app.shared.permissions import get_current_token_payload, get_optional_token_payload, RequireRoles, UserRole, TokenData
 
 router = APIRouter(prefix="/interviews", tags=["Interviews"])
 
@@ -36,20 +36,20 @@ async def schedule_interview(
 @router.get(
     "",
     response_model=List[InterviewResponse],
-    dependencies=[Depends(RequireRoles([UserRole.HR, UserRole.COMPANY_ADMIN, UserRole.INTERVIEWER]))],
 )
 async def list_interviews(
     status: Optional[str] = None,
     interviewer_id: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    current_user: TokenData = Depends(get_current_token_payload),
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
     db: AsyncSession = Depends(get_db),
 ):
     """Danh sách các buổi phỏng vấn."""
+    company_id = current_user.company_id if current_user else None
     return await InterviewService.list_interviews(
         db,
-        company_id=current_user.company_id,
+        company_id=company_id,
         interviewer_id=interviewer_id,
         status=status,
         skip=skip,

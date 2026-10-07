@@ -173,13 +173,20 @@ class InterviewService:
     @staticmethod
     async def list_interviews(
         db: AsyncSession,
-        company_id: str,
+        company_id: Optional[str] = None,
         interviewer_id: Optional[str] = None,
         status: Optional[str] = None,
         skip: int = 0,
         limit: int = 50,
     ) -> List[Interview]:
-        query = select(Interview).where(Interview.company_id == company_id)
+        if not company_id:
+            from app.modules.auth.models import Company
+            comp_res = await db.execute(select(Company.id).order_by(Company.created_at.asc()).limit(1))
+            company_id = comp_res.scalar_one_or_none()
+
+        query = select(Interview)
+        if company_id:
+            query = query.where(Interview.company_id == company_id)
         if interviewer_id:
             query = query.where(Interview.interviewer_id == interviewer_id)
         if status:
