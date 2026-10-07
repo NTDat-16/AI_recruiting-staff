@@ -177,7 +177,7 @@ export const AppSidebar: React.FC = () => {
           const intRes = await fetch("/api/v1/interviews", { headers });
           if (intRes.ok) {
             const ints = await intRes.json();
-            if (Array.isArray(ints) && ints.length > 0) {
+            if (Array.isArray(ints)) {
               interviewsCount = ints.length;
             }
           }

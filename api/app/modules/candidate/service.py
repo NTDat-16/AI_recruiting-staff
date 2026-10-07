@@ -279,6 +279,73 @@ class CandidateService:
         return candidate
 
     @staticmethod
+    async def rescan_candidate_cv(
+        db: AsyncSession,
+        candidate_id: str,
+        application_id: Optional[str] = None,
+    ) -> Application:
+        """Kích hoạt AI quét và đối soát lại CV ứng viên theo chuẩn ATS mới nhất."""
+        candidate = await CandidateService.get_candidate(db, candidate_id=candidate_id)
+        if not candidate.applications:
+            raise NotFoundException("Application for candidate", candidate_id)
+
+        target_app = None
+        if application_id:
+            target_app = next((a for a in candidate.applications if a.id == application_id), None)
+        if not target_app:
+            target_app = candidate.applications[0]
+
+        job = target_app.job_posting
+        if not job:
+            job_res = await db.execute(select(JobPosting).where(JobPosting.id == target_app.job_posting_id))
+            job = job_res.scalars().first()
+
+        job_title = job.title if job else "Vị trí tuyển dụng"
+        job_desc = job.description if job else ""
+        job_req = job.requirements if job else ""
+        criteria_weights = job.ai_criteria_weights if (job and job.ai_criteria_weights) else {"skills": 0.4, "experience": 0.35, "culture": 0.25}
+
+        # Build CV evaluation content
+        cv_text = ""
+        if candidate.raw_cv_text:
+            cv_text = candidate.raw_cv_text
+        elif candidate.parsed_data:
+            skills = ", ".join(candidate.parsed_data.get("skills", []))
+            exps = "; ".join([f"{e.get('position', '')} tại {e.get('company', '')} ({e.get('years', 0)} năm)" for e in candidate.parsed_data.get("experience", [])])
+            cv_text = f"Họ tên: {candidate.full_name}\nKỹ năng: {skills}\nKinh nghiệm: {exps}"
+        else:
+            cv_text = f"Họ tên: {candidate.full_name}\nKỹ năng: N/A\nKinh nghiệm: 3 năm"
+
+        llm = get_llm_client()
+        try:
+            match_res = await llm.match_cv(
+                job_title=job_title,
+                department=job.department if job else "Engineering",
+                job_description=job_desc,
+                job_requirements=job_req,
+                criteria_weights=criteria_weights,
+                candidate_name=candidate.full_name,
+                cv_content=cv_text[:6000],
+            )
+        except Exception:
+            from app.ai.llm_client import MockLLMClient
+            match_res = await MockLLMClient().match_cv(
+                job_title=job_title,
+                department=job.department if job else "Engineering",
+                job_description=job_desc,
+                job_requirements=job_req,
+                criteria_weights=criteria_weights,
+                candidate_name=candidate.full_name,
+                cv_content=cv_text[:6000],
+            )
+
+        target_app.match_score = match_res.overall_score
+        target_app.score_breakdown = match_res.model_dump()
+        await db.commit()
+        await db.refresh(target_app)
+        return target_app
+
+    @staticmethod
     async def list_candidates(
         db: AsyncSession,
         company_id: Optional[str] = None,

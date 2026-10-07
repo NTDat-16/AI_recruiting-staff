@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { formatSource, formatStage } from "@/lib/utils/formatters";
 
 interface PipelineCandidate {
   id: string;
@@ -48,12 +49,53 @@ interface PipelineCandidate {
   aiReasoning: string;
 }
 
+export interface JobHiringStage {
+  id: string;
+  name: string;
+  shortName: string;
+  mappedStage: "screening" | "interview" | "offer" | "hired" | "talent_pool";
+  description?: string;
+}
+
+export const JOB_PIPELINE_MAP: Record<string, JobHiringStage[]> = {
+  "AI Research Scientist & LLM Specialist": [
+    { id: "screening", name: "1. Sàng lọc CV & Hồ sơ R&D", shortName: "Sàng lọc CV", mappedStage: "screening", description: "Đánh giá thâm niên & bài báo ACL/EMNLP" },
+    { id: "research_challenge", name: "2. Thử thách Mô hình & Paper", shortName: "Thử thách R&D", mappedStage: "screening", description: "Kiểm tra cơ chế Attention & Fine-tuning" },
+    { id: "interview", name: "3. Phỏng vấn Hội đồng Kỹ thuật", shortName: "Phỏng vấn Tech", mappedStage: "interview", description: "Hội đồng R&D Lead phỏng vấn trực tuyến" },
+    { id: "culture_fit", name: "4. Phỏng vấn Văn hóa & Giám đốc", shortName: "Văn hóa & Ban Giám đốc", mappedStage: "interview", description: "Đánh giá định hướng nghiên cứu và phối hợp đội ngũ" },
+    { id: "offer", name: "5. Đề xuất Offer & Đãi ngộ", shortName: "Đề xuất Offer", mappedStage: "offer", description: "Thỏa thuận gói đãi ngộ R&D" },
+    { id: "hired", name: "6. Tuyển dụng chính thức", shortName: "Tuyển dụng", mappedStage: "hired", description: "Gia nhập Khối Công nghệ & Sản phẩm" },
+  ],
+  "Senior Data Engineer & MLOps Lead": [
+    { id: "screening", name: "1. Sàng lọc CV (Screening)", shortName: "Sàng lọc CV", mappedStage: "screening", description: "Kiểm tra hạ tầng Cloud Kubernetes, Kafka" },
+    { id: "system_design", name: "2. Thiết kế Hạ tầng Big Data", shortName: "Thiết kế Big Data", mappedStage: "interview", description: "Giải bài toán chịu tải 10M messages/ngày" },
+    { id: "interview", name: "3. Phỏng vấn Chuyên sâu MLOps", shortName: "Phỏng vấn MLOps", mappedStage: "interview", description: "Vấn đáp về CI/CD và tối ưu chi phí AWS" },
+    { id: "offer", name: "4. Đề xuất Offer", shortName: "Đề xuất Offer", mappedStage: "offer", description: "Phát hành offer package" },
+    { id: "hired", name: "5. Tuyển dụng & Onboarding", shortName: "Tuyển dụng", mappedStage: "hired", description: "Hoàn tất tiếp nhận" },
+  ],
+  "Product Manager (AI / ATS)": [
+    { id: "screening", name: "1. Sàng lọc CV (Screening)", shortName: "Sàng lọc CV", mappedStage: "screening", description: "Kinh nghiệm SaaS B2B & Agile Scrum" },
+    { id: "case_study", name: "2. Thuyết trình Case Study Sản phẩm", shortName: "Case Study", mappedStage: "interview", description: "Đánh giá tư duy trải nghiệm ứng viên" },
+    { id: "interview", name: "3. Phỏng vấn Ban Điều Hành", shortName: "Phỏng vấn Điều Hành", mappedStage: "interview", description: "Phỏng vấn với C-Level" },
+    { id: "offer", name: "4. Đề xuất Offer", shortName: "Đề xuất Offer", mappedStage: "offer", description: "Phát hành thư mời làm việc" },
+    { id: "hired", name: "5. Tuyển dụng chính thức", shortName: "Tuyển dụng", mappedStage: "hired", description: "Hoàn tất tuyển dụng" },
+  ],
+  default: [
+    { id: "screening", name: "Sàng lọc (Screening)", shortName: "Sàng lọc", mappedStage: "screening", description: "AI ATS đối soát tiêu chuẩn" },
+    { id: "interview", name: "Phỏng vấn (Interview)", shortName: "Phỏng vấn", mappedStage: "interview", description: "Phỏng vấn chuyên môn" },
+    { id: "offer", name: "Đề nghị (Offer)", shortName: "Đề nghị", mappedStage: "offer", description: "Đề xuất mức lương" },
+    { id: "hired", name: "Tiếp nhận (Hired)", shortName: "Tuyển dụng", mappedStage: "hired", description: "Gia nhập công ty" },
+    { id: "talent_pool", name: "Kho nhân tài", shortName: "Talent Pool", mappedStage: "talent_pool", description: "Lưu trữ tái kết nối" },
+  ],
+};
+
 export function PipelineClient() {
   const [candidates, setCandidates] = useState<PipelineCandidate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<
-    "all" | "screening" | "interview" | "offer" | "hired" | "talent_pool"
-  >("all");
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [selectedJobFilter, setSelectedJobFilter] = useState<string>("all");
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -166,7 +208,17 @@ export function PipelineClient() {
     fetchPipelineCandidates();
   }, []);
 
+  const availableJobs = Array.from(
+    new Set(candidates.map((c) => c.appliedJobTitle).filter(Boolean))
+  );
+
+  const currentStages =
+    selectedJobFilter !== "all" && JOB_PIPELINE_MAP[selectedJobFilter]
+      ? JOB_PIPELINE_MAP[selectedJobFilter]
+      : JOB_PIPELINE_MAP.default;
+
   const filteredCandidates = candidates.filter((c) => {
+    if (selectedJobFilter !== "all" && c.appliedJobTitle !== selectedJobFilter) return false;
     if (activeTab === "screening" && c.stage !== "screening") return false;
     if (activeTab === "interview" && c.stage !== "interview") return false;
     if (activeTab === "offer" && c.stage !== "offer") return false;
@@ -185,6 +237,12 @@ export function PipelineClient() {
 
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredCandidates.length / pageSize));
+  const paginatedCandidates = filteredCandidates.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredCandidates.length) {
@@ -420,9 +478,29 @@ export function PipelineClient() {
           />
         </div>
 
-        <div className="flex items-center space-x-3 pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-3">
+        <div className="flex flex-wrap items-center gap-3 pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-3">
+          {/* Lọc theo Vị Trí Tuyển Dụng */}
           <div className="flex items-center space-x-1.5 text-xs text-slate-600">
-            <span className="whitespace-nowrap">Vòng tuyển:</span>
+            <span className="whitespace-nowrap font-medium text-slate-700">Vị trí:</span>
+            <select
+              value={selectedJobFilter}
+              onChange={(e) => {
+                setSelectedJobFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="text-xs font-semibold text-indigo-700 bg-indigo-50/70 rounded-lg px-2.5 py-1 border border-indigo-200 focus:outline-none cursor-pointer max-w-[210px] truncate"
+            >
+              <option value="all">Tất cả vị trí ({candidates.length})</option>
+              {availableJobs.map((j) => (
+                <option key={j} value={j}>
+                  {j} ({candidates.filter((c) => c.appliedJobTitle === j).length})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-1.5 text-xs text-slate-600">
+            <span className="whitespace-nowrap font-medium text-slate-700">Vòng tuyển:</span>
             <select
               value={stageFilter}
               onChange={(e) => setStageFilter(e.target.value)}
@@ -500,7 +578,7 @@ export function PipelineClient() {
                     </td>
                   </tr>
                 ) : (
-                  filteredCandidates.map((c) => (
+                  paginatedCandidates.map((c) => (
                     <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-4 py-3.5">
                         <input
@@ -546,7 +624,7 @@ export function PipelineClient() {
                       </td>
                       <td className="px-4 py-3.5">{renderStageBadge(c.stage, c.stageLabel)}</td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <p className="font-medium text-slate-900">{c.source}</p>
+                        <p className="font-medium text-slate-900">{formatSource(c.source)}</p>
                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                           {c.appliedDate}
                         </p>
@@ -586,35 +664,77 @@ export function PipelineClient() {
             </table>
           </div>
 
-          {/* Footer */}
+          {/* Footer - Functional Pagination */}
           <div className="px-4 py-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
             <div>
-              Tổng số: <strong className="text-slate-800">{filteredCandidates.length}</strong>
+              Tổng số: <strong className="text-slate-800">{filteredCandidates.length}</strong> hồ sơ
+              {filteredCandidates.length > 0 && (
+                <span className="ml-2 text-slate-400">
+                  (Hiển thị {(currentPage - 1) * pageSize + 1} – {Math.min(currentPage * pageSize, filteredCandidates.length)})
+                </span>
+              )}
             </div>
 
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-1.5">
                 <span>Số dòng/trang:</span>
-                <select className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 bg-white font-medium focus:outline-none">
-                  <option value="10">10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 bg-white font-medium focus:outline-none cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
                 </select>
               </div>
 
-              <span className="font-medium text-slate-700">1 – {filteredCandidates.length}</span>
+              <span className="font-medium text-slate-700">
+                Trang {currentPage} / {totalPages}
+              </span>
 
               <div className="flex items-center space-x-1">
-                <button disabled className="p-1 rounded text-slate-300">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className={`p-1 rounded transition-colors ${
+                    currentPage === 1 ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  }`}
+                  title="Trang đầu"
+                >
                   <ChevronsLeft className="w-4 h-4" />
                 </button>
-                <button disabled className="p-1 rounded text-slate-300">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className={`p-1 rounded transition-colors ${
+                    currentPage === 1 ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  }`}
+                  title="Trang trước"
+                >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button disabled className="p-1 rounded text-slate-300">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className={`p-1 rounded transition-colors ${
+                    currentPage >= totalPages ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  }`}
+                  title="Trang sau"
+                >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-                <button disabled className="p-1 rounded text-slate-300">
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage >= totalPages}
+                  className={`p-1 rounded transition-colors ${
+                    currentPage >= totalPages ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  }`}
+                  title="Trang cuối"
+                >
                   <ChevronsRight className="w-4 h-4" />
                 </button>
               </div>
@@ -622,59 +742,66 @@ export function PipelineClient() {
           </div>
         </div>
       ) : (
-        /* Kanban View Alternative */
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {(["screening", "interview", "offer", "talent_pool"] as const).map((colStage) => {
-            const colCandidates = candidates.filter((c) => c.stage === colStage);
-            const colTitle =
-              colStage === "screening"
-                ? "Sàng lọc (Screening)"
-                : colStage === "interview"
-                ? "Phỏng vấn (Interview)"
-                : colStage === "offer"
-                ? "Đề nghị (Offer)"
-                : "Kho nhân tài (Talent Pool)";
+        /* Kanban View Alternative - Dynamic Hiring Stages per Job */
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-x-auto pb-4">
+          {currentStages.map((stageItem) => {
+            const colCandidates = filteredCandidates.filter((c) => c.stage === stageItem.mappedStage);
 
             return (
               <div
-                key={colStage}
-                className="bg-slate-100/70 rounded-xl p-3 border border-slate-200 flex flex-col min-h-[400px]"
+                key={stageItem.id}
+                className="bg-slate-100/70 rounded-xl p-3 border border-slate-200 flex flex-col min-h-[420px] min-w-[240px]"
               >
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
-                  <span className="text-xs font-bold text-slate-800">{colTitle}</span>
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white text-slate-600 shadow-2xs">
+                  <div className="truncate pr-1">
+                    <span className="text-xs font-bold text-slate-800 block truncate" title={stageItem.name}>
+                      {stageItem.name}
+                    </span>
+                    {stageItem.description && (
+                      <span className="text-[10px] text-slate-400 block truncate">
+                        {stageItem.description}
+                      </span>
+                    )}
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-white text-slate-600 shadow-2xs shrink-0">
                     {colCandidates.length}
                   </span>
                 </div>
 
                 <div className="space-y-2.5 flex-1">
-                  {colCandidates.map((c) => (
-                    <div
-                      key={c.id}
-                      className="bg-white p-3 rounded-lg border border-slate-200/80 shadow-xs space-y-2 hover:border-blue-400 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <Link
-                          href={`/candidates/${c.candidateId || c.id}`}
-                          className="font-semibold text-slate-900 text-xs hover:text-blue-600 transition-colors"
-                        >
-                          {c.name}
-                        </Link>
-                        <button
-                          onClick={() => setSelectedAIModal(c)}
-                          className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1"
-                        >
-                          <Sparkles className="w-2.5 h-2.5" />
-                          <span>{c.matchScore}%</span>
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-slate-500">{c.appliedJobTitle}</p>
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
-                        <span>{c.source}</span>
-                        <span>{c.appliedDate}</span>
-                      </div>
+                  {colCandidates.length === 0 ? (
+                    <div className="h-28 flex items-center justify-center text-slate-400 text-[11px] border border-dashed border-slate-200 rounded-lg">
+                      Chưa có hồ sơ
                     </div>
-                  ))}
+                  ) : (
+                    colCandidates.map((c) => (
+                      <div
+                        key={c.id}
+                        className="bg-white p-3 rounded-lg border border-slate-200/80 shadow-xs space-y-2 hover:border-blue-400 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <Link
+                            href={`/candidates/${c.candidateId || c.id}`}
+                            className="font-semibold text-slate-900 text-xs hover:text-blue-600 transition-colors"
+                          >
+                            {c.name}
+                          </Link>
+                          <button
+                            onClick={() => setSelectedAIModal(c)}
+                            className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1"
+                          >
+                            <Sparkles className="w-2.5 h-2.5" />
+                            <span>{c.matchScore}%</span>
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">{c.appliedJobTitle}</p>
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                          <span className="font-medium text-slate-600">{formatSource(c.source)}</span>
+                          <span className="font-mono">{c.appliedDate}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             );

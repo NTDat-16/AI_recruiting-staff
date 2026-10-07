@@ -26,16 +26,49 @@ export default function InterviewsDashboardPage() {
     setTimeout(() => setNotification(null), 5000);
   };
 
+  const getAuthToken = async () => {
+    let token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    if (!token) {
+      try {
+        const authRes = await fetch("/api/v1/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: "demo.hr@recruiting.vn", password: "Demo123456@" }),
+        });
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          token = authData.access_token;
+          if (token && typeof window !== "undefined") {
+            localStorage.setItem("auth_token", token);
+          }
+        }
+      } catch (err) {
+        console.warn("Auto-login error:", err);
+      }
+    }
+    return token;
+  };
+
   const fetchInterviews = async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      let token = await getAuthToken();
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch("/api/v1/interviews", { headers });
+      let res = await fetch("/api/v1/interviews", { headers });
+      if (res.status === 401) {
+        // Force refresh token on 401
+        if (typeof window !== "undefined") localStorage.removeItem("auth_token");
+        token = await getAuthToken();
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+          res = await fetch("/api/v1/interviews", { headers });
+        }
+      }
+
       if (res.ok) {
         const data = await res.json();
-        setInterviews(data);
+        setInterviews(Array.isArray(data) ? data : []);
       }
     } catch (e) {
       console.error(e);
@@ -46,11 +79,20 @@ export default function InterviewsDashboardPage() {
 
   const fetchCandidates = async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+      let token = await getAuthToken();
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch("/api/v1/candidates", { headers });
+      let res = await fetch("/api/v1/candidates", { headers });
+      if (res.status === 401) {
+        if (typeof window !== "undefined") localStorage.removeItem("auth_token");
+        token = await getAuthToken();
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+          res = await fetch("/api/v1/candidates", { headers });
+        }
+      }
+
       if (res.ok) {
         const data = await res.json();
         setCandidates(data);

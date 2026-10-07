@@ -161,6 +161,19 @@ async def get_candidate_detail(
     )
 
 
+@router.post("/{candidate_id}/scan", response_model=ApplicationResponse)
+async def scan_candidate_cv(
+    candidate_id: str,
+    application_id: Optional[str] = Query(None),
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kích hoạt AI quét và đối soát lại CV ứng viên theo chuẩn ATS mới nhất."""
+    return await CandidateService.rescan_candidate_cv(
+        db, candidate_id=candidate_id, application_id=application_id
+    )
+
+
 @router.get("/{candidate_id}/avatar")
 async def get_candidate_avatar(
     candidate_id: str,

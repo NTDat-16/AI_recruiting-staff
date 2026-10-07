@@ -43,6 +43,8 @@ export default function JobsDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form states
@@ -194,11 +196,21 @@ export default function JobsDashboardPage() {
     return true;
   });
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, departmentFilter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredJobs.length);
+  const paginatedJobs = filteredJobs.slice(startIndex, endIndex);
+
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredJobs.length) {
+    if (selectedIds.length === paginatedJobs.length && paginatedJobs.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredJobs.map((j) => j.id));
+      setSelectedIds(paginatedJobs.map((j) => j.id));
     }
   };
 
@@ -359,7 +371,7 @@ export default function JobsDashboardPage() {
                 <th className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === filteredJobs.length && filteredJobs.length > 0}
+                    checked={selectedIds.length === paginatedJobs.length && paginatedJobs.length > 0}
                     onChange={toggleSelectAll}
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
@@ -382,14 +394,14 @@ export default function JobsDashboardPage() {
                     <span>Đang tải danh sách tin tuyển dụng từ cơ sở dữ liệu...</span>
                   </td>
                 </tr>
-              ) : filteredJobs.length === 0 ? (
+              ) : paginatedJobs.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-8 text-slate-400">
                     Chưa có tin tuyển dụng nào trong cơ sở dữ liệu.
                   </td>
                 </tr>
               ) : (
-                filteredJobs.map((job) => (
+                paginatedJobs.map((job) => (
                   <tr key={job.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-4 py-3.5">
                       <input
@@ -451,32 +463,83 @@ export default function JobsDashboardPage() {
         {/* Footer */}
         <div className="px-4 py-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div>
-            Tổng số: <strong className="text-slate-800">{filteredJobs.length}</strong>
+            Tổng số: <strong className="text-slate-800">{filteredJobs.length}</strong> tin tuyển dụng
           </div>
 
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1.5">
               <span>Số dòng/trang:</span>
-              <select className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 bg-white font-medium focus:outline-none">
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 bg-white font-medium focus:outline-none cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
               </select>
             </div>
 
-            <span className="font-medium text-slate-700">1 – {filteredJobs.length}</span>
+            <span className="font-medium text-slate-700">
+              {filteredJobs.length === 0
+                ? "0 – 0"
+                : `${startIndex + 1} – ${endIndex}`}{" "}
+              / {filteredJobs.length}
+            </span>
 
             <div className="flex items-center space-x-1">
-              <button disabled className="p-1 rounded text-slate-300">
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(1)}
+                className={`p-1 rounded transition-colors ${
+                  currentPage <= 1
+                    ? "text-slate-300 cursor-not-allowed"
+                    : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                }`}
+                title="Trang đầu"
+              >
                 <ChevronsLeft className="w-4 h-4" />
               </button>
-              <button disabled className="p-1 rounded text-slate-300">
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className={`p-1 rounded transition-colors ${
+                  currentPage <= 1
+                    ? "text-slate-300 cursor-not-allowed"
+                    : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                }`}
+                title="Trang trước"
+              >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button disabled className="p-1 rounded text-slate-300">
+              <span className="px-2 text-xs font-semibold text-slate-700">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className={`p-1 rounded transition-colors ${
+                  currentPage >= totalPages
+                    ? "text-slate-300 cursor-not-allowed"
+                    : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                }`}
+                title="Trang sau"
+              >
                 <ChevronRight className="w-4 h-4" />
               </button>
-              <button disabled className="p-1 rounded text-slate-300">
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+                className={`p-1 rounded transition-colors ${
+                  currentPage >= totalPages
+                    ? "text-slate-300 cursor-not-allowed"
+                    : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                }`}
+                title="Trang cuối"
+              >
                 <ChevronsRight className="w-4 h-4" />
               </button>
             </div>

@@ -32,3 +32,62 @@ export function getScoreColor(score: number | undefined): string {
   if (score >= 60) return "text-amber-700 bg-amber-50 border-amber-200";
   return "text-rose-700 bg-rose-50 border-rose-200";
 }
+
+export function formatSource(source: string | undefined): string {
+  if (!source) return "Cổng tuyển dụng";
+  const s = source.toLowerCase();
+  if (s.includes("referral") || s === "internal") return "Giới thiệu nội bộ";
+  if (s.includes("topcv")) return "TopCV";
+  if (s.includes("linkedin")) return "LinkedIn";
+  if (s.includes("vietnamworks")) return "VietnamWorks";
+  if (s.includes("website") || s.includes("career")) return "Cổng tuyển dụng";
+  if (s.includes("headhunt")) return "Headhunter";
+  return source;
+}
+
+export function formatStage(stage: string | undefined): string {
+  if (!stage) return "Tiếp nhận";
+  const s = stage.toLowerCase();
+  switch (s) {
+    case "new":
+      return "Tiếp nhận";
+    case "screening":
+    case "reviewing":
+      return "Sàng lọc CV";
+    case "interview":
+    case "interview_invited":
+      return "Mời phỏng vấn";
+    case "interviewed":
+      return "Đã phỏng vấn";
+    case "offer":
+    case "offered":
+      return "Đề xuất Offer";
+    case "hired":
+      return "Đã tuyển dụng";
+    case "talent_pool":
+      return "Kho nhân tài";
+    case "rejected":
+      return "Chưa phù hợp";
+    default:
+      return stage;
+  }
+}
+
+export function formatExperienceComparison(
+  achievedYears?: number | null,
+  requiredYears?: number | null
+): { text: string; badge: string; isMatch: boolean } {
+  if (achievedYears === undefined || achievedYears === null) {
+    return { text: "Chưa xác định", badge: "", isMatch: false };
+  }
+  const req = requiredYears || 3;
+  const isMatch = achievedYears >= req;
+  const diff = Math.round((achievedYears - req) * 10) / 10;
+  const text = `${achievedYears} / ${req} năm`;
+  const badge = isMatch
+    ? diff > 0
+      ? `Vượt kỳ vọng (+${diff} năm)`
+      : "Đạt chuẩn yêu cầu"
+    : `Thiếu ${Math.abs(diff)} năm`;
+  return { text, badge, isMatch };
+}
