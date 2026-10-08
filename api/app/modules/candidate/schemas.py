@@ -7,7 +7,14 @@ class CandidateCreate(BaseModel):
     full_name: str
     email: EmailStr
     phone: Optional[str] = None
-    source: Optional[str] = "direct_apply"
+    title: Optional[str] = "Chuyên viên Kỹ thuật"
+    total_experience_years: Optional[float] = 3.0
+    skills: Optional[List[str]] = []
+    location: Optional[str] = "TP. Hồ Chí Minh"
+    avatar_url: Optional[str] = None
+    cv_file_url: Optional[str] = None
+    job_id: Optional[str] = None
+    source: Optional[str] = "hr_upload"
     tags: Optional[List[str]] = []
     hr_notes: Optional[str] = None
 

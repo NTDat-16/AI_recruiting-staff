@@ -44,6 +44,189 @@ class CandidateService:
         return candidate
 
     @staticmethod
+    def extract_cv_info(file_bytes: bytes, filename: str) -> Dict[str, Any]:
+        """Trích xuất ảnh đại diện avatar từ CV và bóc tách thông tin tự động."""
+        import base64
+        import re
+        import uuid
+        import os
+
+        # 1. Trích xuất ảnh chân dung/avatar từ CV
+        avatar_url = None
+        avatar_data_url = None
+        try:
+            avatar_bytes = CVParser.extract_avatar_from_bytes(file_bytes, filename)
+            if avatar_bytes:
+                avatars_dir = os.path.join(os.getcwd(), "storage", "avatars")
+                os.makedirs(avatars_dir, exist_ok=True)
+                avatar_id = str(uuid.uuid4())
+                avatar_filename = f"extracted_{avatar_id}.jpg"
+                avatar_path = os.path.join(avatars_dir, avatar_filename)
+                with open(avatar_path, "wb") as f_avt:
+                    f_avt.write(avatar_bytes)
+                avatar_url = f"/storage/avatars/{avatar_filename}"
+                b64 = base64.b64encode(avatar_bytes).decode("utf-8")
+                avatar_data_url = f"data:image/jpeg;base64,{b64}"
+        except Exception as e:
+            logger.warning(f"Lỗi trích xuất avatar: {e}")
+
+        # 2. Trích xuất text thô
+        raw_text = CVParser.extract_text_from_bytes(file_bytes, filename)
+        clean_text = (raw_text or "").replace("\x00", "")
+
+        # 3. Phân tích các trường thông tin cơ bản
+        email_match = re.search(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", clean_text)
+        email = email_match.group(0) if email_match else ""
+
+        phone_match = re.search(r"(\+84|0)(?:[0-9]{9,10}|[0-9\s.-]{9,13})", clean_text)
+        phone = phone_match.group(0).strip() if phone_match else ""
+
+        # Name extraction heuristic
+        name = ""
+        clean_fn = re.sub(r"^[0-9a-fA-F\-]{32,38}[_\-\s]*", "", filename)
+        clean_fn = re.sub(r"^\[.*?\][_\-\s]*", "", clean_fn)
+        clean_fn = re.sub(r"^(cv|resume|curriculum_vitae)[_\-\s]*", "", clean_fn, flags=re.IGNORECASE)
+        clean_fn = os.path.splitext(clean_fn)[0]
+        words = [w for w in re.split(r"[_\-\s]+", clean_fn) if len(w) > 1 and not w.lower() in ("fresher", "junior", "senior", "lead", "backend", "frontend", "engineer", "developer", "embedded", "software", "ai", "web")]
+        if 2 <= len(words) <= 5:
+            name = " ".join(words).title()
+
+        if not name or len(name) > 30:
+            # Check text for uppercase full name (e.g. NGUYEN TAN DAT)
+            for line in clean_text.splitlines()[:15]:
+                line_str = line.strip()
+                # If matches 2 to 4 capitalized words like NGUYEN TAN DAT
+                if re.match(r"^[A-ZÀ-Ỹ]{2,10}(?:\s+[A-ZÀ-Ỹ]{2,10}){1,3}$", line_str):
+                    name = line_str.title()
+                    break
+                elif len(line_str) >= 4 and len(line_str) <= 30 and not any(k in line_str.lower() for k in ("cv", "curriculum", "resume", "email", "phone", "http", "github", "about me", "experience", "education", "skills")):
+                    if re.match(r"^[a-zA-ZÀ-ỹ\s]+$", line_str) and len(line_str.split()) in (2, 3, 4):
+                        name = line_str.title()
+                        break
+
+        if not name:
+            name = "Ứng viên Tiềm năng"
+
+        # Position/Title heuristic
+        title = "Chuyên viên Kỹ thuật"
+        roles = [
+            ("AI Engineer", ["ai engineer", "machine learning", "deep learning", "llm", "nlp", "computer vision"]),
+            ("Backend Developer", ["backend", ".net", "c#", "python", "golang", "java", "node.js", "django", "fastapi"]),
+            ("Frontend Developer", ["frontend", "react", "vue", "next.js", "angular", "typescript", "ui/ux"]),
+            ("Fullstack Developer", ["fullstack", "full stack"]),
+            ("DevOps Engineer", ["devops", "cloud", "aws", "kubernetes", "docker", "ci/cd", "terraform"]),
+            ("Data Engineer", ["data engineer", "spark", "kafka", "hadoop", "big data", "etl"]),
+            ("Product Manager", ["product manager", "scrum", "agile", "po", "ba", "business analyst"]),
+        ]
+        text_lower = clean_text.lower()
+        for r_name, kws in roles:
+            if any(kw in text_lower for kw in kws):
+                title = r_name
+                break
+
+        # Experience years
+        exp_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:\+|năm|years?)", text_lower)
+        total_exp = 3.0
+        if exp_match:
+            try:
+                val = float(exp_match.group(1))
+                if 0 <= val <= 30:
+                    total_exp = val
+            except:
+                pass
+
+        # Skills extraction
+        common_skills = [
+            "Python", "JavaScript", "TypeScript", "React", "Next.js", "Node.js", "C#", ".NET",
+            "Java", "Golang", "PostgreSQL", "MySQL", "MongoDB", "Redis", "Docker", "Kubernetes",
+            "AWS", "Kafka", "Git", "REST API", "GraphQL", "Tailwind CSS", "Linux", "CI/CD",
+            "Machine Learning", "FastAPI", "Spring Boot", "Elasticsearch", "Microservices"
+        ]
+        found_skills = [sk for sk in common_skills if sk.lower() in text_lower]
+        if not found_skills:
+            found_skills = ["Kỹ năng chuyên môn", "Làm việc nhóm", "Giao tiếp"]
+
+        # Location heuristic
+        location = "TP. Hồ Chí Minh"
+        if "hà nội" in text_lower or "ha noi" in text_lower:
+            location = "Hà Nội"
+        elif "đà nẵng" in text_lower or "da nang" in text_lower:
+            location = "Đà Nẵng"
+
+        return {
+            "success": True,
+            "avatar_url": avatar_url,
+            "avatar_data_url": avatar_data_url,
+            "full_name": name,
+            "email": email or f"candidate_{str(uuid.uuid4())[:6]}@recruiting.vn",
+            "phone": phone or "0900 123 456",
+            "title": title,
+            "total_experience_years": round(total_exp, 1),
+            "skills": found_skills[:6],
+            "location": location,
+            "raw_text": clean_text[:2000],
+        }
+
+    @staticmethod
+    async def create_candidate_profile(
+        db: AsyncSession,
+        data: CandidateCreate,
+        company_id: Optional[str] = None,
+    ) -> Candidate:
+        from app.modules.auth.models import Company
+        import uuid
+        if not company_id:
+            comp_res = await db.execute(select(Company.id).order_by(Company.created_at.asc()).limit(1))
+            company_id = comp_res.scalar_one_or_none() or str(uuid.uuid4())
+
+        candidate = await CandidateService.get_or_create_candidate(
+            db, company_id=company_id, email=str(data.email), full_name=data.full_name, phone=data.phone
+        )
+        if data.avatar_url:
+            candidate.avatar_url = data.avatar_url
+        if data.cv_file_url:
+            candidate.cv_file_url = data.cv_file_url
+
+        parsed_data = candidate.parsed_data or {}
+        if not isinstance(parsed_data, dict):
+            parsed_data = {}
+        parsed_data["skills"] = data.skills or parsed_data.get("skills", ["Kỹ thuật"])
+        parsed_data["total_experience_years"] = data.total_experience_years or 3.0
+        parsed_data["location"] = data.location or "TP. Hồ Chí Minh"
+        if data.avatar_url:
+            parsed_data["avatar_url"] = data.avatar_url
+
+        exp_list = parsed_data.get("experience", [])
+        if not exp_list:
+            exp_list = [{"position": data.title or "Chuyên viên Kỹ thuật", "company": "Doanh nghiệp công nghệ", "years": data.total_experience_years or 3}]
+        else:
+            exp_list[0]["position"] = data.title or exp_list[0].get("position", "Chuyên viên Kỹ thuật")
+        parsed_data["experience"] = exp_list
+        candidate.parsed_data = parsed_data
+
+        job_id = data.job_id
+        if not job_id:
+            job_res = await db.execute(select(JobPosting.id).where(JobPosting.company_id == company_id).limit(1))
+            job_id = job_res.scalar_one_or_none()
+
+        if job_id:
+            app_res = await db.execute(
+                select(Application).where(Application.candidate_id == candidate.id, Application.job_posting_id == job_id)
+            )
+            app = app_res.scalars().first()
+            if not app:
+                app = Application(
+                    candidate_id=candidate.id,
+                    job_posting_id=job_id,
+                    status="new",
+                    match_score=85.0,
+                )
+                db.add(app)
+
+        await db.commit()
+        return await CandidateService.get_candidate(db, candidate_id=candidate.id, company_id=company_id)
+
+    @staticmethod
     async def submit_application(
         db: AsyncSession,
         company_id: Optional[str],

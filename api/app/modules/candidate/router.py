@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, status, H
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.modules.candidate.schemas import (
+    CandidateCreate,
     CandidateResponse,
     ApplicationResponse,
     PipelineStatusUpdate,
@@ -78,6 +79,32 @@ async def public_apply_job(
 
 
 # --- Protected HR Endpoints ---
+@router.post("/extract-cv")
+async def extract_cv_metadata(
+    cv_file: UploadFile = File(...),
+):
+    """Trích xuất ảnh đại diện (avatar) từ CV và bóc tách thông tin ứng viên (họ tên, email, sđt, kỹ năng)."""
+    file_bytes = await cv_file.read()
+    return CandidateService.extract_cv_info(file_bytes=file_bytes, filename=cv_file.filename or "cv.pdf")
+
+
+@router.post(
+    "",
+    response_model=CandidateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_candidate(
+    payload: CandidateCreate,
+    current_user: Optional[TokenData] = Depends(get_optional_token_payload),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tạo hồ sơ thẻ ứng viên mới vào cơ sở dữ liệu (kèm avatar trên CV và thông tin)."""
+    company_id = current_user.company_id if current_user else None
+    return await CandidateService.create_candidate_profile(
+        db, data=payload, company_id=company_id
+    )
+
+
 @router.get(
     "",
     response_model=List[CandidateResponse],
@@ -186,6 +213,10 @@ async def get_candidate_avatar(
     )
     if not candidate or not candidate.avatar_url:
         return Response(status_code=status.HTTP_404_NOT_FOUND, content="Candidate avatar not found")
+
+    if candidate.avatar_url.startswith("http://") or candidate.avatar_url.startswith("https://"):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(candidate.avatar_url)
 
     import os
     clean_path = candidate.avatar_url.lstrip("/")
