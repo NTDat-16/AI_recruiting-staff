@@ -405,11 +405,11 @@ export default function CandidatesPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* AI Semantic Search Button */}
           <button
             onClick={() => setIsSemanticModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold text-purple-700 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold text-purple-700 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors shadow-xs cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-purple-600" />
             <span>AI Semantic Search</span>
@@ -417,7 +417,7 @@ export default function CandidatesPage() {
 
           <button
             onClick={() => alert("Nhập danh sách ứng viên từ file Excel")}
-            className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             <span>Nhập từ Excel</span>
@@ -428,7 +428,7 @@ export default function CandidatesPage() {
               resetCardForm();
               setIsAddModalOpen(true);
             }}
-            className="flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Tạo thẻ ứng viên</span>
@@ -441,10 +441,10 @@ export default function CandidatesPage() {
       </div>
 
       {/* 2. Filter Tabs */}
-      <div className="flex items-center space-x-2 text-xs">
+      <div className="flex items-center gap-2 text-xs overflow-x-auto pb-1 no-scrollbar max-w-full">
         <button
           onClick={() => setActiveTab("all")}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "all"
               ? "bg-sky-50 text-blue-600 border border-sky-200"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -455,7 +455,7 @@ export default function CandidatesPage() {
 
         <button
           onClick={() => setActiveTab("active")}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "active"
               ? "bg-sky-50 text-blue-600 border border-sky-200 font-semibold"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -469,7 +469,7 @@ export default function CandidatesPage() {
 
         <button
           onClick={() => setActiveTab("talent_pool")}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "talent_pool"
               ? "bg-sky-50 text-blue-600 border border-sky-200 font-semibold"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -495,7 +495,7 @@ export default function CandidatesPage() {
           />
         </div>
 
-        <div className="flex items-center space-x-3 pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-3">
+        <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-3">
           <div className="flex items-center space-x-1.5 text-xs text-slate-600">
             <span className="whitespace-nowrap">Khu vực:</span>
             <select
@@ -943,7 +943,7 @@ export default function CandidatesPage() {
         title="Tạo Thẻ Hồ Sơ Ứng Viên (Candidate Card Builder)"
         maxWidth="2xl"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-xs">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-xs max-h-[75vh] overflow-y-auto pr-1">
           {/* Cột trái: Bóc tách CV & Form thông tin */}
           <div className="lg:col-span-7 space-y-4">
             {/* Box tải lên CV & trích xuất avatar bằng AI */}

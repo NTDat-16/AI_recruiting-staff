@@ -18,7 +18,9 @@ import {
   Mail,
   UserPlus,
   CheckCheck,
+  Menu,
 } from "lucide-react";
+import { useSidebar } from "./SidebarContext";
 
 interface NotificationItem {
   id: string;
@@ -34,12 +36,18 @@ interface NotificationItem {
 export const AppHeader: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
+  const { toggleMobile } = useSidebar();
+  const [candidateMobileNav, setCandidateMobileNav] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notifTab, setNotifTab] = useState<"all" | "unread" | "interview" | "match">("all");
+
+  useEffect(() => {
+    setCandidateMobileNav(false);
+  }, [pathname]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -110,13 +118,13 @@ export const AppHeader: React.FC = () => {
     return (
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <Link href="/careers" className="flex items-center space-x-2.5 group">
+          <div className="flex items-center space-x-3 sm:space-x-6 min-w-0">
+            <Link href="/careers" className="flex items-center space-x-2.5 group shrink-0">
               <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-extrabold text-base shadow-sm">
                 AI
               </div>
-              <span className="font-bold text-lg tracking-tight text-slate-900">
-                Cổng Tuyển Dụng & Việc Làm
+              <span className="font-bold text-base sm:text-lg tracking-tight text-slate-900 truncate">
+                Cổng Việc Làm AI
               </span>
             </Link>
             <nav className="hidden sm:flex space-x-1 text-sm font-medium text-slate-600">
@@ -143,42 +151,98 @@ export const AppHeader: React.FC = () => {
             </nav>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <Link
               href="/"
-              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-xs"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-1.5 shadow-xs"
             >
-              <span>Cổng Nhà Tuyển Dụng</span>
+              <span className="hidden xs:inline">Cổng</span>
+              <span>Doanh Nghiệp</span>
               <span>→</span>
             </Link>
+
+            {/* Candidate Mobile Menu Button */}
+            <button
+              onClick={() => setCandidateMobileNav(!candidateMobileNav)}
+              className="sm:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Menu điều hướng"
+              aria-label="Menu"
+            >
+              {candidateMobileNav ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Nav Dropdown for Candidate Portal */}
+        {candidateMobileNav && (
+          <div className="sm:hidden border-t border-slate-200 bg-white px-4 py-3 space-y-1.5 animate-in slide-in-from-top-2">
+            <Link
+              href="/careers"
+              onClick={() => setCandidateMobileNav(false)}
+              className={`block px-3 py-2 rounded-lg text-xs font-semibold ${
+                pathname === "/careers" || pathname === "/jobs/public"
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              💼 Danh Sách Việc Làm (Tuyển Dụng)
+            </Link>
+            <Link
+              href="/careers/track"
+              onClick={() => setCandidateMobileNav(false)}
+              className={`block px-3 py-2 rounded-lg text-xs font-semibold ${
+                pathname === "/careers/track"
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              🔍 Tra Cứu Hồ Sơ & Kết Quả Ứng Tuyển
+            </Link>
+            <Link
+              href="/"
+              onClick={() => setCandidateMobileNav(false)}
+              className="block px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 border-t border-slate-100 pt-2.5"
+            >
+              🏢 Đăng Nhập Cổng Tuyển Dụng ATS →
+            </Link>
+          </div>
+        )}
       </header>
     );
   }
 
   // 2. Chế độ Nhà Tuyển Dụng / Quản Trị ATS (Matching Studio Screenshots)
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-xs h-14 flex items-center px-4 justify-between">
-      {/* Bên trái: App Launcher 3x3 + Logo + Bộ chuyển cổng phân đoạn */}
-      <div className="flex items-center space-x-3 sm:space-x-4">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200/80 shadow-xs h-14 flex items-center px-3 sm:px-4 justify-between">
+      {/* Bên trái: Menu Mobile Toggle + App Launcher 3x3 + Logo + Bộ chuyển cổng phân đoạn */}
+      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+        {/* Mobile Hamburger Toggle for ATS Sidebar */}
+        <button
+          onClick={toggleMobile}
+          className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors md:hidden cursor-pointer shrink-0"
+          title="Mở menu thanh bên"
+          aria-label="Mở menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         {/* Lưới 3x3 */}
         <button
-          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
+          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors hidden sm:block shrink-0"
           title="Ứng dụng hệ sinh thái"
         >
           <Grid className="w-5 h-5 text-slate-600" />
         </button>
 
         {/* Logo & Tên Nền Tảng */}
-        <Link href="/" className="flex items-center space-x-2 group">
+        <Link href="/" className="flex items-center space-x-2 group shrink-0">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-extrabold text-sm tracking-wider shadow-sm shadow-blue-500/30">
             AI
           </div>
-          <span className="font-bold text-slate-900 text-base tracking-tight whitespace-nowrap">
+          <span className="font-bold text-slate-900 text-sm sm:text-base tracking-tight whitespace-nowrap">
             AI Talent Suite
           </span>
-          <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200/70">
+          <span className="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200/70">
             AI ATS Core
           </span>
         </Link>
@@ -252,7 +316,7 @@ export const AppHeader: React.FC = () => {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-88 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200/90 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+            <div className="absolute -right-12 sm:right-0 mt-2 w-[calc(100vw-2rem)] max-w-sm sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200/90 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
               {/* Header */}
               <div className="p-3.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center space-x-2">

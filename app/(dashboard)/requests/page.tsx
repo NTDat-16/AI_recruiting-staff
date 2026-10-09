@@ -204,7 +204,7 @@ export default function RequestsPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => alert("Tính năng nhập dữ liệu hàng loạt từ tệp Excel chuẩn ATS")}
             className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
@@ -228,7 +228,7 @@ export default function RequestsPage() {
       </div>
 
       {/* 2. Filter Tabs */}
-      <div className="flex items-center space-x-2 text-xs">
+      <div className="flex items-center gap-2 text-xs overflow-x-auto pb-1 no-scrollbar max-w-full whitespace-nowrap">
         <button
           onClick={() => setActiveTab("all")}
           className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
@@ -298,7 +298,7 @@ export default function RequestsPage() {
         </div>
 
         {/* Department Dropdown + Action Icons */}
-        <div className="flex items-center space-x-3 pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-3">
+        <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-3">
           <div className="flex items-center space-x-1.5 text-xs text-slate-600">
             <span className="whitespace-nowrap">Phòng ban:</span>
             <select

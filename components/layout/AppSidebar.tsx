@@ -15,7 +15,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  X,
 } from "lucide-react";
+import { useSidebar } from "./SidebarContext";
 
 interface NavItem {
   name: string;
@@ -83,7 +85,7 @@ const navItems: NavItem[] = [
 
 export const AppSidebar: React.FC = () => {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const { isMobileOpen, setIsMobileOpen, isCollapsed, toggleCollapsed } = useSidebar();
   const [counts, setCounts] = useState<{
     requests: number;
     jobs: number;
@@ -139,7 +141,7 @@ export const AppSidebar: React.FC = () => {
           }
         } catch {}
 
-        // 2. Fetch candidates & pipeline count to strictly match pipeline and candidate pages
+        // 2. Fetch candidates & pipeline count
         let candidatesCount = statsCandidates;
         let pipelineCount = statsCandidates;
 
@@ -159,7 +161,7 @@ export const AppSidebar: React.FC = () => {
           }
         } catch {}
 
-        // 3. Fetch jobs & requests count
+        // 3. Fetch jobs count
         let jobsCount = statsJobs;
         try {
           const jobRes = await fetch("/api/v1/jobs/public");
@@ -207,92 +209,229 @@ export const AppSidebar: React.FC = () => {
   }, [pathname]);
 
   return (
-    <aside
-      className={`bg-white border-r border-slate-200/80 flex flex-col justify-between transition-all duration-300 shrink-0 z-40 select-none ${
-        collapsed ? "w-16" : "w-56 lg:w-60"
-      }`}
-      style={{ minHeight: "calc(100vh - 3.5rem)" }}
-    >
-      {/* Danh sách mục điều hướng */}
-      <div className="py-3 px-2 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+    <>
+      {/* 1. Desktop Sidebar (Hidden on mobile < md, visible and collapsible on md+) */}
+      <aside
+        className={`hidden md:flex bg-white border-r border-slate-200/80 flex-col justify-between transition-all duration-300 shrink-0 z-30 select-none ${
+          isCollapsed ? "w-16" : "w-56 lg:w-60"
+        }`}
+        style={{ minHeight: "calc(100vh - 3.5rem)" }}
+      >
+        {/* Danh sách mục điều hướng */}
+        <div className="py-3 px-2 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-          const badgeValue =
-            item.badgeType === "ai"
-              ? item.badge
-              : item.key && counts[item.key] !== undefined
-              ? counts[item.key]
-              : item.badge;
+            const badgeValue =
+              item.badgeType === "ai"
+                ? item.badge
+                : item.key && counts[item.key] !== undefined
+                ? counts[item.key]
+                : item.badge;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={collapsed ? item.name : undefined}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group ${
-                isActive
-                  ? "bg-indigo-50 text-indigo-700 font-semibold shadow-2xs"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <div className="flex items-center space-x-3 overflow-hidden">
-                <Icon
-                  className={`w-4 h-4 shrink-0 transition-colors ${
-                    isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
-                  }`}
-                />
-                {!collapsed && (
-                  <span className="truncate whitespace-nowrap tracking-tight">{item.name}</span>
-                )}
-              </div>
-
-              {!collapsed && badgeValue !== undefined && badgeValue !== null && (
-                <div>
-                  {item.badgeType === "ai" ? (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs">
-                      {badgeValue}
-                    </span>
-                  ) : (
-                    <span
-                      className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-semibold ${
-                        isActive
-                          ? "bg-indigo-600 text-white"
-                          : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
-                      }`}
-                    >
-                      {badgeValue}
-                    </span>
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={isCollapsed ? item.name : undefined}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 font-semibold shadow-2xs"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <div className="flex items-center space-x-3 overflow-hidden">
+                  <Icon
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
+                    }`}
+                  />
+                  {!isCollapsed && (
+                    <span className="truncate whitespace-nowrap tracking-tight">{item.name}</span>
                   )}
                 </div>
-              )}
-            </Link>
-          );
-        })}
-      </div>
 
-      {/* Chân sidebar với nút thu gọn / mở rộng */}
-      <div className="p-2 border-t border-slate-100 flex items-center justify-between">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors text-xs font-medium space-x-2"
-          title={collapsed ? "Mở rộng thanh menu" : "Thu gọn thanh menu"}
-        >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4" />
-          ) : (
-            <div className="flex items-center space-x-2 w-full justify-start pl-1">
-              <ChevronLeft className="w-4 h-4" />
-              <Menu className="w-4 h-4" />
-              <span className="text-[11px] text-slate-400">Thu gọn</span>
+                {!isCollapsed && badgeValue !== undefined && badgeValue !== null && (
+                  <div>
+                    {item.badgeType === "ai" ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs">
+                        {badgeValue}
+                      </span>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-semibold ${
+                          isActive
+                            ? "bg-indigo-600 text-white"
+                            : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+                        }`}
+                      >
+                        {badgeValue}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Chân sidebar với nút thu gọn / mở rộng */}
+        <div className="p-2 border-t border-slate-100 flex items-center justify-between">
+          <button
+            onClick={toggleCollapsed}
+            className="w-full flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors text-xs font-medium space-x-2 cursor-pointer"
+            title={isCollapsed ? "Mở rộng thanh menu" : "Thu gọn thanh menu"}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <div className="flex items-center space-x-2 w-full justify-start pl-1">
+                <ChevronLeft className="w-4 h-4" />
+                <Menu className="w-4 h-4" />
+                <span className="text-[11px] text-slate-400">Thu gọn</span>
+              </div>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* 2. Mobile Responsive Drawer (Shown on < md when isMobileOpen is true) */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => setIsMobileOpen(false)}
+          />
+
+          {/* Drawer content */}
+          <aside className="relative z-10 w-72 max-w-[85vw] h-full bg-white shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200 select-none">
+            {/* Drawer Header */}
+            <div>
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-extrabold text-sm tracking-wider shadow-sm">
+                    AI
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-900 text-sm tracking-tight block">
+                      AI Talent Suite
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      Menu Điều Hướng ATS
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  title="Đóng menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Portal Quick Switcher in Mobile Drawer */}
+              <div className="p-3 bg-slate-50 border-b border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Cổng Hệ Thống
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 text-xs font-semibold">
+                  <Link
+                    href="/"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-blue-600 shadow-2xs font-bold text-center"
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>HR ATS</span>
+                  </Link>
+                  <Link
+                    href="/careers"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-white border border-slate-200 text-slate-700 shadow-2xs text-center"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Cổng UV</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Nav Items */}
+              <div className="py-2 px-2 space-y-1 max-h-[calc(100vh-14rem)] overflow-y-auto">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                  const badgeValue =
+                    item.badgeType === "ai"
+                      ? item.badge
+                      : item.key && counts[item.key] !== undefined
+                      ? counts[item.key]
+                      : item.badge;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsMobileOpen(false)}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                        isActive
+                          ? "bg-indigo-50 text-indigo-700 font-semibold shadow-2xs"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3 overflow-hidden">
+                        <Icon
+                          className={`w-4 h-4 shrink-0 ${
+                            isActive ? "text-indigo-600" : "text-slate-400"
+                          }`}
+                        />
+                        <span className="truncate whitespace-nowrap">{item.name}</span>
+                      </div>
+
+                      {badgeValue !== undefined && badgeValue !== null && (
+                        <div>
+                          {item.badgeType === "ai" ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs">
+                              {badgeValue}
+                            </span>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[11px] font-semibold ${
+                                isActive
+                                  ? "bg-indigo-600 text-white"
+                                  : "bg-slate-100 text-slate-500"
+                              }`}
+                            >
+                              {badgeValue}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          )}
-        </button>
-      </div>
-    </aside>
+
+            {/* Mobile Drawer Footer */}
+            <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span className="text-[11px] font-medium">Hệ thống sẵn sàng</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono">v2.4.1</span>
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
   );
 };

@@ -38,20 +38,22 @@ export const Modal: React.FC<ModalProps> = ({
         {/* Dialog panel */}
         <div
           className={cn(
-            "relative w-full transform overflow-hidden rounded-2xl bg-white p-6 text-left shadow-xl transition-all",
+            "relative w-full transform rounded-2xl bg-white p-4 sm:p-6 text-left shadow-xl transition-all max-h-[90vh] flex flex-col",
             maxW[maxWidth]
           )}
         >
-          <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-            <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+          <div className="flex items-center justify-between pb-3 mb-3 sm:mb-4 border-b border-slate-100 shrink-0">
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900 pr-2">{title}</h3>
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 rounded-lg p-1"
+              className="text-slate-400 hover:text-slate-600 rounded-lg p-1 text-base leading-none"
             >
               ✕
             </button>
           </div>
-          {children}
+          <div className="overflow-y-auto pr-1 flex-1">
+            {children}
+          </div>
         </div>
       </div>
     </div>

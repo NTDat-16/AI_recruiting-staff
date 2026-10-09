@@ -336,12 +336,12 @@ export function PipelineClient() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* View Toggle */}
           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold mr-1">
             <button
               onClick={() => setViewMode("table")}
-              className={`p-1.5 rounded-md transition-all ${
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 viewMode === "table" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
               }`}
               title="Xem dạng bảng"
@@ -350,7 +350,7 @@ export function PipelineClient() {
             </button>
             <button
               onClick={() => setViewMode("kanban")}
-              className={`p-1.5 rounded-md transition-all ${
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
                 viewMode === "kanban" ? "bg-white text-blue-600 shadow-xs" : "text-slate-500"
               }`}
               title="Xem dạng Kanban"
@@ -361,7 +361,7 @@ export function PipelineClient() {
 
           <button
             onClick={() => alert("Xuất danh sách tiến trình tuyển dụng sang Excel")}
-            className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
+            className="flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
           >
             <Download className="w-4 h-4 text-slate-600" />
             <span>Xuất Excel</span>
@@ -369,13 +369,13 @@ export function PipelineClient() {
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-xs"
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 sm:py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Tiếp nhận hồ sơ</span>
           </button>
 
-          <button className="p-2 text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+          <button className="p-2 text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
             <MoreVertical className="w-4 h-4" />
           </button>
         </div>
@@ -743,14 +743,14 @@ export function PipelineClient() {
         </div>
       ) : (
         /* Kanban View Alternative - Dynamic Hiring Stages per Job */
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scrollbar-thin">
           {currentStages.map((stageItem) => {
             const colCandidates = filteredCandidates.filter((c) => c.stage === stageItem.mappedStage);
 
             return (
               <div
                 key={stageItem.id}
-                className="bg-slate-100/70 rounded-xl p-3 border border-slate-200 flex flex-col min-h-[420px] min-w-[240px]"
+                className="bg-slate-100/70 rounded-xl p-3 border border-slate-200 flex flex-col min-h-[420px] w-72 sm:w-80 shrink-0 snap-start"
               >
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
                   <div className="truncate pr-1">

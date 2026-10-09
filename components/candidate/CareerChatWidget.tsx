@@ -93,14 +93,14 @@ export const CareerChatWidget: React.FC = () => {
   ];
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 max-w-[calc(100vw-2rem)]">
       {/* Floating Trigger Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold text-sm rounded-full shadow-lg hover:shadow-indigo-500/30 hover:scale-105 transition-all cursor-pointer"
+          className="group flex items-center gap-2 sm:gap-2.5 px-3.5 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold text-xs sm:text-sm rounded-full shadow-lg hover:shadow-indigo-500/30 hover:scale-105 transition-all cursor-pointer"
         >
-          <span className="text-xl animate-bounce">💬</span>
+          <span className="text-lg sm:text-xl animate-bounce">💬</span>
           <span>Tư vấn nghề nghiệp AI</span>
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
         </button>
@@ -108,7 +108,7 @@ export const CareerChatWidget: React.FC = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-[360px] sm:w-[400px] h-[520px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="w-[calc(100vw-2rem)] sm:w-[400px] h-[75vh] sm:h-[520px] max-h-[600px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           {/* Header */}
           <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-4 text-white flex items-center justify-between shadow-xs">
             <div className="flex items-center space-x-3">

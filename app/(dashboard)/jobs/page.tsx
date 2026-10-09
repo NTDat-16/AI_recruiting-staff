@@ -236,10 +236,10 @@ export default function JobsDashboardPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => alert("Nhập hàng loạt tin tuyển dụng từ Excel")}
-            className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-xs"
+            className="flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             <span>Nhập từ Excel</span>
@@ -247,23 +247,23 @@ export default function JobsDashboardPage() {
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-xs"
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 sm:py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Thêm mới</span>
           </button>
 
-          <button className="p-2 text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+          <button className="p-2 text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
             <MoreVertical className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* 2. Filter Tabs */}
-      <div className="flex items-center space-x-2 text-xs">
+      <div className="flex items-center gap-2 text-xs overflow-x-auto pb-1 no-scrollbar max-w-full">
         <button
           onClick={() => setActiveTab("all")}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "all"
               ? "bg-sky-50 text-blue-600 border border-sky-200"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -274,7 +274,7 @@ export default function JobsDashboardPage() {
 
         <button
           onClick={() => setActiveTab("published")}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "published"
               ? "bg-sky-50 text-blue-600 border border-sky-200 font-semibold"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -288,7 +288,7 @@ export default function JobsDashboardPage() {
 
         <button
           onClick={() => setActiveTab("draft")}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "draft"
               ? "bg-sky-50 text-blue-600 border border-sky-200 font-semibold"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -302,7 +302,7 @@ export default function JobsDashboardPage() {
 
         <button
           onClick={() => setActiveTab("closed")}
-          className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+          className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap ${
             activeTab === "closed"
               ? "bg-sky-50 text-blue-600 border border-sky-200 font-semibold"
               : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -328,7 +328,7 @@ export default function JobsDashboardPage() {
           />
         </div>
 
-        <div className="flex items-center space-x-3 pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-3">
+        <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-slate-100 pl-0 md:pl-3">
           <div className="flex items-center space-x-1.5 text-xs text-slate-600">
             <span className="whitespace-nowrap">Phòng ban:</span>
             <select

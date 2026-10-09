@@ -4,6 +4,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { AppHeader } from "./AppHeader";
 import { AppSidebar } from "./AppSidebar";
+import { SidebarProvider } from "./SidebarContext";
 import { CareerChatWidget } from "@/components/candidate/CareerChatWidget";
 
 interface AppShellProps {
@@ -26,7 +27,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         <AppHeader />
 
         {/* Nội dung ứng viên */}
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
           {children}
         </main>
 
@@ -42,20 +43,22 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   // Chế độ Bảng Điều Khiển Nhà Tuyển Dụng & Quản Trị ATS
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col text-slate-900">
-      {/* Header điều hướng trên cùng */}
-      <AppHeader />
+    <SidebarProvider>
+      <div className="min-h-screen bg-[#f8fafc] flex flex-col text-slate-900">
+        {/* Header điều hướng trên cùng */}
+        <AppHeader />
 
-      {/* Thân ứng dụng gồm Sidebar trái + Vùng nội dung chính */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Menu thanh bên trái */}
-        <AppSidebar />
+        {/* Thân ứng dụng gồm Sidebar trái + Vùng nội dung chính */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Menu thanh bên trái (Desktop + Mobile Drawer) */}
+          <AppSidebar />
 
-        {/* Vùng nội dung nghiệp vụ */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-7 max-w-[1700px] w-full mx-auto">
-          {children}
-        </main>
+          {/* Vùng nội dung nghiệp vụ */}
+          <main className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-7 max-w-[1700px] w-full mx-auto overflow-x-hidden">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
